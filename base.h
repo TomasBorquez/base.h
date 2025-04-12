@@ -5,8 +5,8 @@
   https://github.com/TomasBorquez/base.h
 
   Usage:
-  #define BASE_IMPLEMENTATION
-  #include "base.h"
+    #define BASE_IMPLEMENTATION
+    #include "base.h"
 
   More on the the `README.md`
 */
