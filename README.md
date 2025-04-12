@@ -1,9 +1,13 @@
 # About:
 C lacks a proper standard library so I decided to create a proper one that makes it easier for me to get started on a project
 and have the necessary default functions by default. 
+
 Planned to be cross-platform and work on `windows` and `linux` as well as in many compilers like `gcc`, `clang`, `tcc` and `MSVC`.
 This is still very much experimental and if used you should read `base.h` implementations and assume they might have bugs, I strongly
 recommend to just use as inspiration or recreationally until version 1.0.
+
+I will add features as I need them and fix stuff as I break it, once decently stable I'll make it as cross-platform as possible and add tests,
+and once I make sure everything in stable I'll then finally launch 1.0.
 
 ## Features:
 - `Defer` - It works similar to Go's defer it only works on `gcc` and `clang` with `-fblocks` flag (`MSVC` doesnt support this yet nor does `tcc`, and they probably wont until C23/C26+)
@@ -18,7 +22,7 @@ defer {
 - `Arenas` - Based on Ginger Bill's arena implemenation.
 - `String` - Some basic string functions.
 - `File System` - Some abstractions for both `windows` and `linux` for files.
-- And more!
+- And more...
 
 # TODO:
 - [x] Return `errno_t` and `LogError` rather than asserting
