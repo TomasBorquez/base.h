@@ -24,6 +24,27 @@ defer {
 - `File System` - Some abstractions for both `windows` and `linux` for files.
 - And more...
 
+## Usage:
+
+A good way to keep this updated is by using git submodules, you can add `base.h` like this:
+
+```bash
+git submodule add https://github.com/TomasBorquez/base.h.git vendor/base
+```
+
+This will add `base.h` to `./vendor`, then you can include it from there or add a `-I"./vendor/base"` flag when compiling and importing like:
+
+```C
+#define BASE_IMPLEMENTATION
+#include "base.h"
+```
+
+And for keeping it updated you can:
+
+```C 
+git submodule update --init
+```
+
 # TODO:
 - [x] Return `errno_t` and `LogError` rather than asserting
 - [x] Add version at the top of the file and add proper license
