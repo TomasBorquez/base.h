@@ -12,11 +12,12 @@ and once I make sure everything in stable I'll then finally launch 1.0.
 ## Features:
 - `Defer` - It works similar to Go's defer it only works on `gcc` and `clang` with `-fblocks` flag (`MSVC` doesnt support this yet nor does `tcc`, and they probably wont until C23/C26+)
 ```c 
+#define DEFER_DEFINITION // Must define this macro
+
 i32 *ptr = (i32 *) malloc(10 * sizeof(int));
 defer {
-  free(ptr);
+  free(ptr); // will execute at the end
 }
-// will execute at the end
 ```
 - `Vector` - In here you have `VecPush`, `VecShift`, `VecUnshift`, etc. It's just a regular macro implementation.
 - `Arenas` - Based on Ginger Bill's arena implemenation.

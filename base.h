@@ -1,7 +1,7 @@
 /* MIT License
 
   base.h - Better cross-platform std
-  Version - 2025-04-12 (0.1.1):
+  Version - 2025-04-14 (0.1.2):
   https://github.com/TomasBorquez/base.h
 
   Usage:
@@ -11,14 +11,7 @@
   More on the the `README.md`
 */
 
-#pragma once
-#include <assert.h>
-#include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
-/* Platform MACROS */
+/* --- Platform MACROS and includes --- */
 #if defined(__clang__)
 #define COMPILER_CLANG
 #elif defined(_MSC_VER)
@@ -56,7 +49,7 @@
 #include <unistd.h>
 #endif
 
-/* Types and MACRO types */
+/* --- Types and MACRO types --- */
 // Unsigned int types
 typedef uint8_t u8;
 typedef uint16_t u16;
@@ -115,7 +108,8 @@ typedef struct {
 
 #define TYPE_INIT(type) (type)
 
-/* Vector */
+/* --- Vector Macros --- */
+// TODO: Add MSVC like vector macros
 #define VEC_TYPE(typeName, valueType)                                                                                                                                                                                                          \
   typedef struct {                                                                                                                                                                                                                             \
     valueType *data;                                                                                                                                                                                                                           \
@@ -195,13 +189,13 @@ typedef struct {
     vector.data = NULL;                                                                                                                                                                                                                        \
   })
 
-/* Misc */
+/* --- Time and Platforms --- */
 i64 TimeNow();
 void WaitTime(i64 ms);
 String GetCompiler();
 String GetPlatform();
 
-/* Errors */
+/* --- Errors --- */
 #ifdef PLATFORM_LINUX
 typedef i32 errno_t;
 #endif
@@ -211,7 +205,7 @@ enum GeneralError {
   MEMORY_ALLOCATION_FAILED,
 };
 
-/* Arena */
+/* --- Arena --- */
 typedef struct {
   int8_t *buffer;
   size_t bufferLength;
@@ -227,16 +221,16 @@ void *ArenaAlloc(Arena *arena, size_t size);
 void ArenaFree(Arena *arena);
 void ArenaReset(Arena *arena);
 
-/* String */
-// * Inspired from clay.h
-#define STRING_LENGTH(s) ((sizeof(s) / sizeof((s)[0])) - sizeof((s)[0]))
+/* --- String and Macros --- */
+#define STRING_LENGTH(s) ((sizeof(s) / sizeof((s)[0])) - sizeof((s)[0])) // NOTE: Inspired from clay.h
 #define ENSURE_STRING_LITERAL(x) ("" x "")
-// Note: If an error led you here, it's because `S` can only be used with string literals, i.e. S("SomeString") and not S(yourString)
-#define S(string) (TYPE_INIT(String){.length = STRING_LENGTH(ENSURE_STRING_LITERAL(string)), .data = (string)})
 
-// * This is to have printf like warnings on format
+// NOTE: If an error led you here, it's because `S` can only be used with string literals, i.e. `S("SomeString")` and not `S(yourString)` - for that use `s()`
+#define S(string) (TYPE_INIT(String){.length = STRING_LENGTH(ENSURE_STRING_LITERAL(string)), .data = (string)})
+String s(char *msg);
+
 #ifdef COMPILER_CLANG
-#define FORMAT_CHECK(fmt_pos, args_pos) __attribute__((format(printf, fmt_pos, args_pos)))
+#define FORMAT_CHECK(fmt_pos, args_pos) __attribute__((format(printf, fmt_pos, args_pos))) // NOTE: Printf like warnings on format
 #else
 #define FORMAT_CHECK(fmt_pos, args_pos)
 #endif
@@ -246,10 +240,10 @@ String F(Arena *arena, const char *format, ...) FORMAT_CHECK(2, 3);
 VEC_TYPE(StringVector, String);
 #define StringVectorPushMany(vector, ...)                                                                                                                                                                                                      \
   ({                                                                                                                                                                                                                                           \
-    String values[] = {__VA_ARGS__};                                                                                                                                                                                                           \
+    char *values[] = {__VA_ARGS__};                                                                                                                                                                                                            \
     size_t count = sizeof(values) / sizeof(values[0]);                                                                                                                                                                                         \
     for (size_t i = 0; i < count; i++) {                                                                                                                                                                                                       \
-      VecPush(vector, values[i]);                                                                                                                                                                                                              \
+      VecPush(vector, s(values[i]));                                                                                                                                                                                                           \
     }                                                                                                                                                                                                                                          \
   })
 
@@ -268,15 +262,14 @@ String StrSlice(Arena *arena, String *str, i32 start, i32 end);
 String ConvertExe(Arena *arena, String path);
 String ConvertPath(Arena *arena, String path);
 
-/* Random */
-void RandomInit();
+/* --- Random --- */
+void RandomInit(); // NOTE: Must init before using
 u64 RandomGetSeed();
 void RandomSetSeed(u64 newSeed);
-// ! Must init before using any of them
 i32 RandomInteger(i32 min, i32 max);
 f32 RandomFloat(f32 min, f32 max);
 
-/* File */
+/* --- File --- */
 #define MAX_FILES 200
 
 typedef struct {
@@ -317,13 +310,16 @@ errno_t FileRead(Arena *arena, String *path, String *result);
 
 // TODO: enum FileWriteError {};
 errno_t FileWrite(String *path, String *data);
+
 // TODO: enum FileDeleteError {};
 errno_t FileDelete(String *path);
+
 // TODO: enum FileRenameError {};
 errno_t FileRename(String *oldPath, String *newPath);
-bool Mkdir(String path); // *Makes a dir if it does not exist only
 
-/* Logger */
+bool Mkdir(String path); // NOTE: Mkdir if not exist
+
+/* --- Logger --- */
 #define RESET "\x1b[0m"
 #define GRAY "\x1b[38;2;192;192;192m" // Light gray
 #define RED "\x1b[0;31m"
@@ -336,6 +332,12 @@ void LogError(const char *format, ...) FORMAT_CHECK(1, 2);
 void LogSuccess(const char *format, ...) FORMAT_CHECK(1, 2);
 void LogInit();
 
+/* --- Defer Macros --- */
+#ifdef DEFER_DEFINITION // NOTE: Optional since not all compilers support it and not all C versions do either
+
+/* - GCC implementation -
+  NOTE: Must use C23 (depending on the platform)
+*/
 #ifdef COMPILER_GCC
 #define defer __DEFER(__COUNTER__)
 #define __DEFER(N) __DEFER_(N)
@@ -345,8 +347,10 @@ void LogInit();
   [[gnu::cleanup(F)]] int V;                                                                                                                                                                                                                   \
   auto void F(int *)
 
+/* - Clang implementation -
+  NOTE: Must compile with flag `-fblocks`
+*/
 #elif defined(COMPILER_CLANG)
-// NOTE: Must compile with -fblocks
 typedef void (^const __df_t)(void);
 
 [[maybe_unused]]
@@ -358,17 +362,28 @@ static inline void __df_cb(__df_t *__fp) {
 #define __DEFER(N) __DEFER_(N)
 #define __DEFER_(N) __DEFER__(__DEFER_VARIABLE_##N)
 #define __DEFER__(V) [[gnu::cleanup(__df_cb)]] __df_t V = ^void(void)
+
+/* -- MSVC implementation --
+  NOTE: Not yet available, use `_try/_finally`
+*/
+#elif defined(COMPILER_MSVC)
+#error "Not available yet in MSVC"
 #endif
 
+#endif
+
+/*
+  Implementation of base.h
+  https://github.com/TomasBorquez/base.h
+*/
 #ifdef BASE_IMPLEMENTATION
-/* Misc Implementation */
 String GetCompiler() {
 #if defined(COMPILER_CLANG)
   return S("clang");
 #elif defined(COMPILER_GCC)
   return S("gcc");
 #elif defined(COMPILER_MSVC)
-  return S("msvc");
+  return S("MSVC");
 #endif
 }
 
@@ -468,7 +483,9 @@ Arena ArenaInit(size_t size) {
 static size_t maxStringSize = 10000;
 
 static size_t strLength(char *str, size_t maxSize) {
-  assert(str != NULL && "string should never be NULL");
+  if (str == NULL) {
+    return 0;
+  }
 
   size_t len = 0;
   while (len < maxSize && str[len] != '\0') {
@@ -491,7 +508,7 @@ void SetMaxStrSize(size_t size) {
 }
 
 String StrNewSize(Arena *arena, char *str, size_t len) {
-  const size_t memorySize = sizeof(char) * len + 1; // * Includes null terminator
+  const size_t memorySize = sizeof(char) * len + 1; // NOTE: Includes null terminator
   char *allocatedString = ArenaAlloc(arena, memorySize);
 
   memcpy(allocatedString, str, memorySize);
@@ -501,7 +518,10 @@ String StrNewSize(Arena *arena, char *str, size_t len) {
 
 String StrNew(Arena *arena, char *str) {
   const size_t len = strLength(str, maxStringSize);
-  const size_t memorySize = sizeof(char) * len + 1; // * Includes null terminator
+  if (len == 0) {
+    return (String){0, NULL};
+  }
+  const size_t memorySize = sizeof(char) * len + 1; // NOTE: Includes null terminator
   char *allocatedString = ArenaAlloc(arena, memorySize);
 
   memcpy(allocatedString, str, memorySize);
@@ -509,12 +529,19 @@ String StrNew(Arena *arena, char *str) {
   return (String){len, allocatedString};
 }
 
+String s(char *msg) {
+  return (String){
+      .length = strlen(msg),
+      .data = msg,
+  };
+}
+
 String StrConcat(Arena *arena, String *string1, String *string2) {
   assert(!StrIsNull(string1) && "string1 should never be NULL");
   assert(!StrIsNull(string2) && "string2 should never be NULL");
 
   const size_t len = string1->length + string2->length;
-  const size_t memorySize = sizeof(char) * len + 1; // * Includes null terminator
+  const size_t memorySize = sizeof(char) * len + 1; // NOTE: Includes null terminator
   char *allocatedString = ArenaAlloc(arena, memorySize);
 
   memcpy_s(allocatedString, memorySize, string1->data, string1->length);
@@ -699,7 +726,6 @@ String ConvertPath(Arena *arena, String path) {
 }
 
 String ParsePath(Arena *arena, String path) {
-  String platform = GetPlatform();
   String result;
 
   if (path.length >= 2 && path.data[0] == '.' && (path.data[1] == '/' || path.data[1] == '\\')) {
