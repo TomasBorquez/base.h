@@ -10,6 +10,12 @@
 
   More on the the `README.md`
 */
+#pragma once
+#include <assert.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 /* --- Platform MACROS and includes --- */
 #if defined(__clang__)
@@ -109,7 +115,7 @@ typedef struct {
 #define TYPE_INIT(type) (type)
 
 /* --- Vector Macros --- */
-// TODO: Add MSVC like vector macros
+// TODO: Make it MSVC compatible
 #define VEC_TYPE(typeName, valueType)                                                                                                                                                                                                          \
   typedef struct {                                                                                                                                                                                                                             \
     valueType *data;                                                                                                                                                                                                                           \
