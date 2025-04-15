@@ -1,7 +1,7 @@
 /* MIT License
 
   base.h - Better cross-platform std
-  Version - 2025-04-14 (0.1.3):
+  Version - 2025-04-15 (0.1.4):
   https://github.com/TomasBorquez/base.h
 
   Usage:
@@ -43,11 +43,102 @@
 #include <unistd.h>
 #endif
 
+#if defined(__STDC_VERSION__)
+#if (__STDC_VERSION__ >= 202311L)
+#define C_STANDARD_C23
+#define C_STANDARD "C23"
+#elif (__STDC_VERSION__ >= 201710L)
+#define C_STANDARD_C17
+#define C_STANDARD "C17"
+#elif (__STDC_VERSION__ >= 201112L)
+#define C_STANDARD_C11
+#define C_STANDARD "C11"
+#elif (__STDC_VERSION__ >= 199901L)
+#define C_STANDARD_C99
+#define C_STANDARD "C99"
+#else
+#error "you are cooked" // ???
+#endif
+#endif
+
+#if defined(COMPILER_MSVC)
+#if _MSVC_LANG >= 202000L
+#define C_STANDARD_C23
+#define C_STANDARD "C23"
+#elif _MSVC_LANG >= 201704L
+#define C_STANDARD_C17
+#define C_STANDARD "C17"
+#elif _MSVC_LANG >= 201103L
+#define C_STANDARD_C11
+#define C_STANDARD "C11"
+#else
+#error "you are cooked" // ???
+#endif
+#endif
+
 #include <assert.h>
+#include <ctype.h>
+#include <errno.h>
+#include <stdarg.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
+
+/* --- Platform Specific --- */
+#ifdef PLATFORM_WIN
+/* Process functions */
+#define popen _popen
+#define pclose _pclose
+
+/* File I/O functions */
+#define fileno _fileno
+#define fdopen _fdopen
+#define access _access
+#define unlink _unlink
+#define isatty _isatty
+#define dup _dup
+#define dup2 _dup2
+#define ftruncate _chsize
+#define fsync _commit
+
+/* Directory functions */
+#define mkdir(path, mode) _mkdir(path)
+#define rmdir _rmdir
+#define getcwd _getcwd
+#define chdir _chdir
+
+/* Process/Threading */
+#define getpid _getpid
+#define execvp _execvp
+#define execve _execve
+#define sleep(x) Sleep((x) * 1000)
+#define usleep(x) Sleep((x) / 1000)
+
+/* String functions */
+#define strcasecmp _stricmp
+#define strncasecmp _strnicmp
+#define strdup _strdup
+
+/* File modes */
+#define R_OK 4
+#define W_OK 2
+#define X_OK 0 /* Windows doesn't have explicit X_OK */
+#define F_OK 0
+
+/* File descriptors */
+#define STDIN_FILENO 0
+#define STDOUT_FILENO 1
+#define STDERR_FILENO 2
+
+/* Some functions need complete replacements */
+#ifdef COMPILER_MSVC
+#define snprintf _snprintf
+#define vsnprintf _vsnprintf
+#endif
+
+#endif
 
 /* --- Types and MACRO types --- */
 // Unsigned int types
@@ -196,9 +287,7 @@ String GetCompiler();
 String GetPlatform();
 
 /* --- Errors --- */
-#ifdef PLATFORM_LINUX
 typedef i32 errno_t;
-#endif
 
 enum GeneralError {
   SUCCESS,
@@ -293,6 +382,10 @@ typedef struct {
 
   size_t totalCount;
 } FileData;
+
+#ifndef MAX_PATH
+#define MAX_PATH 260
+#endif
 extern char currentPath[MAX_PATH];
 
 char *GetCwd();
@@ -362,10 +455,10 @@ static inline void __df_cb(__df_t *__fp) {
 #define __DEFER__(V) [[gnu::cleanup(__df_cb)]] __df_t V = ^void(void)
 
 /* -- MSVC implementation --
-  NOTE: Not yet available, use `_try/_finally`
+  NOTE: Not available yet in MSVC, use `_try/_finally`
 */
 #elif defined(COMPILER_MSVC)
-#error "Not available yet in MSVC"
+#error "Not available yet in MSVC, use `_try/_finally`"
 #endif
 
 #endif
@@ -376,6 +469,66 @@ static inline void __df_cb(__df_t *__fp) {
   https://github.com/TomasBorquez/base.h
 */
 #ifdef BASE_IMPLEMENTATION
+
+// --- Platform specific functions ---
+#if !defined(PLATFORM_WIN) && !defined(C_STANDARD_C11)
+#ifndef EINVAL
+#define EINVAL 22 // NOTE: Invalid argument
+#endif
+#ifndef ERANGE
+#define ERANGE 34 // NOTE: Result too large
+#endif
+
+errno_t memcpy_s(void *dest, size_t destSize, const void *src, size_t count) {
+  if (dest == NULL) {
+    return EINVAL;
+  }
+
+  if (src == NULL || destSize < count) {
+    memset(dest, 0, destSize);
+    return EINVAL;
+  }
+
+  memcpy(dest, src, count);
+  return 0;
+}
+
+inline errno_t fopen_s(FILE **streamptr, const char *filename, const char *mode) {
+  if (streamptr == NULL) {
+    return EINVAL;
+  }
+
+  *streamptr = NULL;
+  if (filename == NULL || mode == NULL) {
+    return EINVAL;
+  }
+
+  if (*filename == '\0') {
+    return EINVAL;
+  }
+
+  const char *valid_modes = "rwa+btx";
+  size_t mode_len = strlen(mode);
+
+  if (mode_len == 0) {
+    return EINVAL;
+  }
+
+  for (size_t i = 0; i < mode_len; i++) {
+    if (strchr(valid_modes, mode[i]) == NULL) {
+      return EINVAL;
+    }
+  }
+
+  *streamptr = fopen(filename, mode);
+  if (*streamptr == NULL) {
+    return errno;
+  }
+
+  return 0;
+}
+#endif
+
 String GetCompiler() {
 #if defined(COMPILER_CLANG)
   return S("clang");
@@ -854,14 +1007,14 @@ FileData *GetDirFiles() {
     Folder *currFolder = &fileData->folders[fileData->folderCount];
 
     if (isDirectory) {
-      currFolder->name = _strdup(findData.cFileName);
+      currFolder->name = strdup(findData.cFileName);
       fileData->folderCount++;
     }
 
     if (!isDirectory) {
       char *dot = strrchr(findData.cFileName, '.');
       if (dot != NULL) {
-        currFile->extension = _strdup(dot + 1);
+        currFile->extension = strdup(dot + 1);
 
         size_t baseNameLength = dot - findData.cFileName;
         char *baseName = (char *)malloc(baseNameLength + 1);
@@ -871,8 +1024,8 @@ FileData *GetDirFiles() {
       }
 
       if (dot == NULL) {
-        currFile->extension = _strdup("");
-        currFile->name = _strdup(findData.cFileName);
+        currFile->extension = strdup("");
+        currFile->name = strdup(findData.cFileName);
       }
 
       LARGE_INTEGER createTime, modifyTime;
@@ -961,13 +1114,13 @@ errno_t FileStats(String *path, File *result) {
     nameStart = pathStr;
   }
 
-  result->name = _strdup(nameStart);
+  result->name = strdup(nameStart);
 
   char *extStart = strrchr(nameStart, '.');
   if (extStart) {
-    result->extension = _strdup(extStart + 1);
+    result->extension = strdup(extStart + 1);
   } else {
-    result->extension = _strdup("");
+    result->extension = strdup("");
   }
 
   LARGE_INTEGER fileSize;

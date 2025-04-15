@@ -49,6 +49,7 @@ git submodule update --init
 # TODO:
 - [x] Return `errno_t` and `LogError` rather than asserting
 - [x] Add version at the top of the file and add proper license
+- [x] More general unix functions
 - [ ] Create enums of errors:
     - [x] `GeneralError`
     - [x] `FileStatsError`
