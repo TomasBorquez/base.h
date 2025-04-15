@@ -1,7 +1,7 @@
 /* MIT License
 
   base.h - Better cross-platform std
-  Version - 2025-04-14 (0.1.2):
+  Version - 2025-04-14 (0.1.3):
   https://github.com/TomasBorquez/base.h
 
   Usage:
@@ -10,12 +10,6 @@
 
   More on the the `README.md`
 */
-#pragma once
-#include <assert.h>
-#include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 
 /* --- Platform MACROS and includes --- */
 #if defined(__clang__)
@@ -25,7 +19,7 @@
 #elif defined(__GNUC__)
 #define COMPILER_GCC
 #else
-#error "The codebase only supports Clang, MSVC and GCC"
+#error "The codebase only supports Clang, MSVC and GCC, TCC soon"
 #endif
 
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32__)
@@ -33,10 +27,10 @@
 #elif defined(__linux__) || defined(__gnu_linux__)
 #define PLATFORM_LINUX
 #else
-#error "The codebase only supports windows and linux"
+#error "The codebase only supports windows and linux, macos soon"
 #endif
 
-#if defined(COMPILER_CLANG)
+#ifdef COMPILER_CLANG
 #define FILE_NAME __FILE_NAME__
 #else
 #define FILE_NAME __FILE__
@@ -44,16 +38,16 @@
 
 #ifdef PLATFORM_WIN
 #define WIN32_LEAN_AND_MEAN
-#include <errno.h>
-#include <limits.h>
-#include <string.h>
 #include <windows.h>
 #elif def PLATFORM_LINUX
-#include <errno.h>
-#include <limits.h>
-#include <string.h>
 #include <unistd.h>
 #endif
+
+#include <assert.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 /* --- Types and MACRO types --- */
 // Unsigned int types
@@ -115,7 +109,7 @@ typedef struct {
 #define TYPE_INIT(type) (type)
 
 /* --- Vector Macros --- */
-// TODO: Make it MSVC compatible
+// TODO: Add MSVC like vector macros
 #define VEC_TYPE(typeName, valueType)                                                                                                                                                                                                          \
   typedef struct {                                                                                                                                                                                                                             \
     valueType *data;                                                                                                                                                                                                                           \
@@ -306,9 +300,7 @@ void SetCwd(char *destination);
 FileData *GetDirFiles();
 FileData *NewFileData();
 
-enum FileStatsError {
-  FILE_GET_ATTRIBUTES_FAILED = 1,
-};
+enum FileStatsError { FILE_GET_ATTRIBUTES_FAILED = 1 };
 errno_t FileStats(String *path, File *file);
 
 enum FileReadError { FILE_NOT_EXIST = 1, FILE_OPEN_FAILED, FILE_GET_SIZE_FAILED, FILE_READ_FAILED };
@@ -327,7 +319,7 @@ bool Mkdir(String path); // NOTE: Mkdir if not exist
 
 /* --- Logger --- */
 #define RESET "\x1b[0m"
-#define GRAY "\x1b[38;2;192;192;192m" // Light gray
+#define GRAY "\x1b[38;2;192;192;192m"
 #define RED "\x1b[0;31m"
 #define GREEN "\x1b[0;32m"
 #define ORANGE "\x1b[0;33m"
@@ -339,7 +331,7 @@ void LogSuccess(const char *format, ...) FORMAT_CHECK(1, 2);
 void LogInit();
 
 /* --- Defer Macros --- */
-#ifdef DEFER_DEFINITION // NOTE: Optional since not all compilers support it and not all C versions do either
+#ifdef DEFER_MACRO // NOTE: Optional since not all compilers support it and not all C versions do either
 
 /* - GCC implementation -
   NOTE: Must use C23 (depending on the platform)
@@ -380,6 +372,7 @@ static inline void __df_cb(__df_t *__fp) {
 
 /*
   Implementation of base.h
+  Version - 2025-04-12 (0.1.1):
   https://github.com/TomasBorquez/base.h
 */
 #ifdef BASE_IMPLEMENTATION
