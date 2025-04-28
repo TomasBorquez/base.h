@@ -1,7 +1,7 @@
 /* MIT License
 
   base.h - Better cross-platform std
-  Version - 2025-04-15 (0.1.4):
+  Version - 2025-04-28 (0.1.5):
   https://github.com/TomasBorquez/base.h
 
   Usage:
@@ -10,6 +10,10 @@
 
   More on the the `README.md`
 */
+#define BASE_IMPLEMENTATION
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /* --- Platform MACROS and includes --- */
 #if defined(__clang__)
@@ -39,8 +43,9 @@
 #ifdef PLATFORM_WIN
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
-#elif def PLATFORM_LINUX
+#elif defined(PLATFORM_LINUX)
 #include <unistd.h>
+#include <linux/limits.h>
 #endif
 
 #if defined(__STDC_VERSION__)
@@ -84,6 +89,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdbool.h>
 #include <time.h>
 
 /* --- Platform Specific --- */
@@ -163,11 +169,6 @@ typedef int64_t i64;
 typedef float f32;
 typedef double f64;
 
-// Boolean defines
-#define bool _Bool
-#define false 0
-#define true 1
-
 typedef struct {
   size_t length; // Does not include null terminator
   char *data;
@@ -208,21 +209,23 @@ typedef struct {
     i32 capacity;                                                                                                                                                                                                                              \
   } typeName;
 
-#define VecPush(vector, value)                                                                                                                                                                                                                 \
+#define VecTypeof(vector) __typeof__(*vector.data)
+
+#define VecPush(vec, value)                                                                                                                                                                                                                 \
   ({                                                                                                                                                                                                                                           \
-    if (vector.length >= vector.capacity) {                                                                                                                                                                                                    \
-      if (vector.capacity == 0) vector.capacity = 128;                                                                                                                                                                                         \
-      else vector.capacity *= 2;                                                                                                                                                                                                               \
-      vector.data = realloc(vector.data, vector.capacity * sizeof(*vector.data));                                                                                                                                                              \
+    if (vec.length >= vec.capacity) {                                                                                                                                                                                                    \
+      if (vec.capacity == 0) vec.capacity = 128;                                                                                                                                                                                         \
+      else vec.capacity *= 2;                                                                                                                                                                                                               \
+      vec.data = (VecTypeof(vec)*)realloc(vec.data, vec.capacity * sizeof(*vec.data));                                                                                                                                                              \
     }                                                                                                                                                                                                                                          \
-    vector.data[vector.length++] = value;                                                                                                                                                                                                      \
-    &vector.data[vector.length - 1];                                                                                                                                                                                                           \
+    vec.data[vec.length++] = value;                                                                                                                                                                                                      \
+    &vec.data[vec.length - 1];                                                                                                                                                                                                           \
   })
 
 #define VecPop(vector)                                                                                                                                                                                                                         \
   ({                                                                                                                                                                                                                                           \
     assert(vector.length > 0 && "Cannot pop from empty vector");                                                                                                                                                                               \
-    typeof(vector.data[0]) value = vector.data[vector.length - 1];                                                                                                                                                                             \
+    VecTypeof(vector) value = vector.data[vector.length - 1];                                                                                                                                                                             \
     vector.length--;                                                                                                                                                                                                                           \
     &value;                                                                                                                                                                                                                                    \
   })
@@ -230,11 +233,23 @@ typedef struct {
 #define VecShift(vector)                                                                                                                                                                                                                       \
   ({                                                                                                                                                                                                                                           \
     assert(vector.length != 0 && "Length should at least be >= 1");                                                                                                                                                                            \
-    typeof(vector.data[0]) value = vector.data[0];                                                                                                                                                                                             \
+    VecTypeof(vector) value = vector.data[0];                                                                                                                                                                                             \
     memmove(&vector.data[0], &vector.data[1], (vector.length - 1) * sizeof(*vector.data));                                                                                                                                                     \
     vector.length--;                                                                                                                                                                                                                           \
     &value;                                                                                                                                                                                                                                    \
   })
+
+#define VecShift(vector)                                                                                                                                                                                                                       \
+  ({                                                                                                                                                                                                                                           \
+    assert(vector.length != 0 && "Length should at least be >= 1");                                                                                                                                                                            \
+    VecTypeof(vector) value = vector.data[0];                                                                                                                                                                                             \
+    memmove(&vector.data[0], &vector.data[1], (vector.length - 1) * sizeof(*vector.data));                                                                                                                                                     \
+    vector.length--;                                                                                                                                                                                                                           \
+    &value;                                                                                                                                                                                                                                    \
+  })
+
+#define VecForEach(vec, it) \
+  for (VecTypeof(vec)* it = vec.data; vec.data && (it != vec.data + vec.length); ++it)
 
 #define VecUnshift(vector, value)                                                                                                                                                                                                              \
   ({                                                                                                                                                                                                                                           \
@@ -297,16 +312,17 @@ enum GeneralError {
 /* --- Arena --- */
 typedef struct {
   int8_t *buffer;
-  size_t bufferLength;
-  size_t prevOffset;
-  size_t currOffset;
+  size_t capacity;
+  size_t offset;
 } Arena;
 
 // This makes sure right alignment on 86/64 bits
 #define DEFAULT_ALIGNMENT (2 * sizeof(void *))
 
-Arena ArenaInit(size_t size);
+void *ArenaAllocAligned(Arena *arena, size_t size, size_t align);
 void *ArenaAlloc(Arena *arena, size_t size);
+bool ArenaReserve(Arena *arena, size_t cap);
+char *ArenaAllocChars(Arena *arena, size_t count);
 void ArenaFree(Arena *arena);
 void ArenaReset(Arena *arena);
 
@@ -382,11 +398,6 @@ typedef struct {
 
   size_t totalCount;
 } FileData;
-
-#ifndef MAX_PATH
-#define MAX_PATH 260
-#endif
-extern char currentPath[MAX_PATH];
 
 char *GetCwd();
 void SetCwd(char *destination);
@@ -465,7 +476,7 @@ static inline void __df_cb(__df_t *__fp) {
 
 /*
   Implementation of base.h
-  Version - 2025-04-12 (0.1.1):
+  Version - 2025-04-28 (0.1.5):
   https://github.com/TomasBorquez/base.h
 */
 #ifdef BASE_IMPLEMENTATION
@@ -577,58 +588,55 @@ void WaitTime(i64 ms) {
 #endif
 }
 
-/* Arena Implemenation */
-// https://www.gingerbill.org/article/2019/02/08/memory-allocation-strategies-002/
-static intptr_t alignForward(const intptr_t ptr) {
-  intptr_t p, a, modulo;
-
-  p = ptr;
-  a = (intptr_t)DEFAULT_ALIGNMENT;
-  // Same as (p % a) but faster as 'a' is a power of two
-  modulo = p & (a - 1);
-
-  if (modulo != 0) {
-    // If 'p' address is not aligned, push the address to the
-    // next value which is aligned
-    p += a - modulo;
-  }
-  return p;
-}
-
-void *ArenaAlloc(Arena *arena, const size_t size) {
-  // Align 'currPtr' forward to the specified alignment
-  intptr_t currPtr = (intptr_t)arena->buffer + (intptr_t)arena->currOffset;
-  intptr_t offset = alignForward(currPtr);
-  offset -= (intptr_t)arena->buffer; // Change to relative offset
-
-  if (offset + size > arena->bufferLength) {
-    LogError("Arena ran out of space left, bufferLength: %llu", arena->bufferLength);
+// align must be a power of 2
+void *ArenaAllocAligned(Arena *arena, size_t size, size_t align) {
+  size_t tail = arena->offset & (align - 1);
+  size_t begin = tail ? arena->offset + align - tail : arena->offset;
+  size_t end = begin + size;
+  if (!ArenaReserve(arena, end)) {
     return NULL;
   }
-
-  void *ptr = &arena->buffer[offset];
-  arena->prevOffset = offset;
-  arena->currOffset = offset + size;
-
+  arena->offset = end;
+  void* ptr = arena->buffer + begin;
   memset(ptr, 0, size);
   return ptr;
 }
 
+void* ArenaAlloc(Arena *arena, size_t size) {
+  return ArenaAllocAligned(arena, size, DEFAULT_ALIGNMENT);
+}
+
+bool ArenaReserve(Arena* arena, size_t cap) {
+  if (cap >= arena->capacity) {
+    // power of 2 growth policy
+    size_t newCapacity = arena->capacity << 1;
+    newCapacity = newCapacity > cap ? newCapacity : cap;
+    void* newBuffer = malloc(newCapacity);
+    if (!newBuffer) {
+      return false;
+    }
+    if (arena->buffer) {
+      memcpy(newBuffer, arena->buffer, arena->offset);
+      free(arena->buffer);
+    }
+    arena->buffer = (int8_t*)newBuffer;
+    arena->capacity = newCapacity;
+  }
+  return true;
+}
+
+char* ArenaAllocChars(Arena* arena, size_t count) {
+  return (char*)ArenaAllocAligned(arena, count, 1);
+}
+
 void ArenaFree(Arena *arena) {
-  free(arena->buffer);
+  if (arena->buffer) {
+    free(arena->buffer);
+  }
 }
 
 void ArenaReset(Arena *arena) {
-  arena->currOffset = 0;
-}
-
-Arena ArenaInit(size_t size) {
-  return (Arena){
-      .buffer = (i8 *)malloc(size),
-      .bufferLength = size,
-      .prevOffset = 0,
-      .currOffset = 0,
-  };
+  arena->offset = 0;
 }
 
 /* String Implementation */
@@ -661,7 +669,7 @@ void SetMaxStrSize(size_t size) {
 
 String StrNewSize(Arena *arena, char *str, size_t len) {
   const size_t memorySize = sizeof(char) * len + 1; // NOTE: Includes null terminator
-  char *allocatedString = ArenaAlloc(arena, memorySize);
+  char *allocatedString = ArenaAllocChars(arena, memorySize);
 
   memcpy(allocatedString, str, memorySize);
   addNullTerminator(allocatedString, len);
@@ -674,7 +682,7 @@ String StrNew(Arena *arena, char *str) {
     return (String){0, NULL};
   }
   const size_t memorySize = sizeof(char) * len + 1; // NOTE: Includes null terminator
-  char *allocatedString = ArenaAlloc(arena, memorySize);
+  char *allocatedString = ArenaAllocChars(arena, memorySize);
 
   memcpy(allocatedString, str, memorySize);
   addNullTerminator(allocatedString, len);
@@ -694,7 +702,7 @@ String StrConcat(Arena *arena, String *string1, String *string2) {
 
   const size_t len = string1->length + string2->length;
   const size_t memorySize = sizeof(char) * len + 1; // NOTE: Includes null terminator
-  char *allocatedString = ArenaAlloc(arena, memorySize);
+  char *allocatedString = ArenaAllocChars(arena, memorySize);
 
   memcpy_s(allocatedString, memorySize, string1->data, string1->length);
   memcpy_s(allocatedString + string1->length, memorySize, string2->data, string2->length);
@@ -845,7 +853,7 @@ String F(Arena *arena, const char *format, ...) {
   size_t size = vsnprintf(NULL, 0, format, args) + 1; // +1 for null terminator
   va_end(args);
 
-  char *buffer = (char *)ArenaAlloc(arena, size);
+  char *buffer = (char *)ArenaAllocChars(arena, size);
   va_start(args, format);
   vsnprintf(buffer, size, format, args);
   va_end(args);
@@ -961,12 +969,12 @@ f32 RandomFloat(f32 min, f32 max) {
 
 /* File Implementation */
 #ifdef PLATFORM_WIN
-char currentPath[MAX_PATH];
 char *GetCwd() {
+  static _Thread_local char currentPath[PATH_MAX];
   DWORD length = GetCurrentDirectory(MAX_PATH, currentPath);
   if (length == 0) {
     printf("Error getting current directory: %lu\n", GetLastError());
-    return "";
+    currentPath[0] = '\0';
   }
   return currentPath;
 }
@@ -983,7 +991,7 @@ FileData *GetDirFiles() {
   HANDLE hFind;
   char searchPath[MAX_PATH];
   FileData *fileData = NewFileData();
-  i32 result = snprintf(searchPath, MAX_PATH - 2, "%s\\*", currentPath);
+  i32 result = snprintf(searchPath, MAX_PATH - 2, "%s\\*", GetCwd());
   assert(result >= 0 && "sprint should not return error");
 
   hFind = FindFirstFile(searchPath, &findData);
@@ -1177,7 +1185,7 @@ errno_t FileRead(Arena *arena, String *path, String *result) {
     return FILE_GET_SIZE_FAILED;
   }
 
-  char *buffer = (char *)ArenaAlloc(arena, fileSize.QuadPart);
+  char *buffer = (char *)ArenaAllocChars(arena, fileSize.QuadPart);
   if (!buffer) {
     LogError("Memory allocation failed");
     CloseHandle(hFile);
@@ -1307,12 +1315,13 @@ bool Mkdir(String path) {
   return false;
 }
 
-#elif def PLATFORM_LINUX
-char currentPath[PATH_MAX];
+#elif defined(PLATFORM_LINUX)
+
 char *GetCwd() {
+  static _Thread_local char currentPath[PATH_MAX];
   if (getcwd(currentPath, PATH_MAX) == NULL) {
     printf("Error getting current directory: %s\n", strerror(errno));
-    return "";
+    currentPath[0] = '\0';
   }
   return currentPath;
 }
@@ -1369,5 +1378,9 @@ void LogInit() {
   dwMode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
   SetConsoleMode(hOut, dwMode);
 #endif
+}
+#endif
+
+#ifdef __cplusplus
 }
 #endif
