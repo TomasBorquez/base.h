@@ -202,97 +202,97 @@ typedef struct {
 
 /* --- Vector Macros --- */
 // TODO: Add MSVC like vector macros
-#define VEC_TYPE(typeName, valueType)                                                                                                                                                                                                          \
-  typedef struct {                                                                                                                                                                                                                             \
-    valueType *data;                                                                                                                                                                                                                           \
-    i32 length;                                                                                                                                                                                                                                \
-    i32 capacity;                                                                                                                                                                                                                              \
+#define VEC_TYPE(typeName, valueType) \
+  typedef struct { \
+    valueType *data; \
+    i32 length; \
+    i32 capacity; \
   } typeName;
 
 #define VecTypeof(vector) __typeof__(*vector.data)
 
-#define VecPush(vec, value)                                                                                                                                                                                                                 \
-  ({                                                                                                                                                                                                                                           \
-    if (vec.length >= vec.capacity) {                                                                                                                                                                                                    \
-      if (vec.capacity == 0) vec.capacity = 128;                                                                                                                                                                                         \
-      else vec.capacity *= 2;                                                                                                                                                                                                               \
-      vec.data = (VecTypeof(vec)*)realloc(vec.data, vec.capacity * sizeof(*vec.data));                                                                                                                                                              \
-    }                                                                                                                                                                                                                                          \
-    vec.data[vec.length++] = value;                                                                                                                                                                                                      \
-    &vec.data[vec.length - 1];                                                                                                                                                                                                           \
+#define VecPush(vec, value) \
+  ({ \
+    if (vec.length >= vec.capacity) { \
+      if (vec.capacity == 0) vec.capacity = 128; \
+      else vec.capacity *= 2; \
+      vec.data = (VecTypeof(vec)*)realloc(vec.data, vec.capacity * sizeof(*vec.data)); \
+    } \
+    vec.data[vec.length++] = value; \
+    &vec.data[vec.length - 1]; \
   })
 
-#define VecPop(vector)                                                                                                                                                                                                                         \
-  ({                                                                                                                                                                                                                                           \
-    assert(vector.length > 0 && "Cannot pop from empty vector");                                                                                                                                                                               \
-    VecTypeof(vector) value = vector.data[vector.length - 1];                                                                                                                                                                             \
-    vector.length--;                                                                                                                                                                                                                           \
-    &value;                                                                                                                                                                                                                                    \
+#define VecPop(vector) \
+  ({ \
+    assert(vector.length > 0 && "Cannot pop from empty vector"); \
+    VecTypeof(vector) value = vector.data[vector.length - 1]; \
+    vector.length--; \
+    &value; \
   })
 
-#define VecShift(vector)                                                                                                                                                                                                                       \
-  ({                                                                                                                                                                                                                                           \
-    assert(vector.length != 0 && "Length should at least be >= 1");                                                                                                                                                                            \
-    VecTypeof(vector) value = vector.data[0];                                                                                                                                                                                             \
-    memmove(&vector.data[0], &vector.data[1], (vector.length - 1) * sizeof(*vector.data));                                                                                                                                                     \
-    vector.length--;                                                                                                                                                                                                                           \
-    &value;                                                                                                                                                                                                                                    \
+#define VecShift(vector) \
+  ({ \
+    assert(vector.length != 0 && "Length should at least be >= 1"); \
+    VecTypeof(vector) value = vector.data[0]; \
+    memmove(&vector.data[0], &vector.data[1], (vector.length - 1) * sizeof(*vector.data)); \
+    vector.length--; \
+    &value; \
   })
 
-#define VecShift(vector)                                                                                                                                                                                                                       \
-  ({                                                                                                                                                                                                                                           \
-    assert(vector.length != 0 && "Length should at least be >= 1");                                                                                                                                                                            \
-    VecTypeof(vector) value = vector.data[0];                                                                                                                                                                                             \
-    memmove(&vector.data[0], &vector.data[1], (vector.length - 1) * sizeof(*vector.data));                                                                                                                                                     \
-    vector.length--;                                                                                                                                                                                                                           \
-    &value;                                                                                                                                                                                                                                    \
+#define VecShift(vector) \
+  ({ \
+    assert(vector.length != 0 && "Length should at least be >= 1"); \
+    VecTypeof(vector) value = vector.data[0]; \
+    memmove(&vector.data[0], &vector.data[1], (vector.length - 1) * sizeof(*vector.data)); \
+    vector.length--; \
+    &value; \
   })
 
 #define VecForEach(vec, it) \
   for (VecTypeof(vec)* it = vec.data; vec.data && (it != vec.data + vec.length); ++it)
 
-#define VecUnshift(vector, value)                                                                                                                                                                                                              \
-  ({                                                                                                                                                                                                                                           \
-    if (vector.length >= vector.capacity) {                                                                                                                                                                                                    \
-      if (vector.capacity == 0) vector.capacity = 2;                                                                                                                                                                                           \
-      else vector.capacity *= 2;                                                                                                                                                                                                               \
-      vector.data = realloc(vector.data, vector.capacity * sizeof(*vector.data));                                                                                                                                                              \
-    }                                                                                                                                                                                                                                          \
-                                                                                                                                                                                                                                               \
-    if (vector.length > 0) {                                                                                                                                                                                                                   \
-      memmove(&vector.data[1], &vector.data[0], vector.length * sizeof(*vector.data));                                                                                                                                                         \
-    }                                                                                                                                                                                                                                          \
-                                                                                                                                                                                                                                               \
-    vector.data[0] = value;                                                                                                                                                                                                                    \
-    vector.length++;                                                                                                                                                                                                                           \
-    &value;                                                                                                                                                                                                                                    \
+#define VecUnshift(vector, value) \
+  ({ \
+    if (vector.length >= vector.capacity) { \
+      if (vector.capacity == 0) vector.capacity = 2; \
+      else vector.capacity *= 2; \
+      vector.data = realloc(vector.data, vector.capacity * sizeof(*vector.data)); \
+    } \
+    \
+    if (vector.length > 0) { \
+      memmove(&vector.data[1], &vector.data[0], vector.length * sizeof(*vector.data)); \
+    } \
+    \
+    vector.data[0] = value; \
+    vector.length++; \
+    &value; \
   })
 
-#define VecInsert(vector, value, index)                                                                                                                                                                                                        \
-  ({                                                                                                                                                                                                                                           \
-    assert(index <= vector.length && "Index out of bounds for insertion");                                                                                                                                                                     \
-    if (vector.length >= vector.capacity) {                                                                                                                                                                                                    \
-      if (vector.capacity == 0) vector.capacity = 2;                                                                                                                                                                                           \
-      else vector.capacity *= 2;                                                                                                                                                                                                               \
-      vector.data = realloc(vector.data, vector.capacity * sizeof(*vector.data));                                                                                                                                                              \
-    }                                                                                                                                                                                                                                          \
-    memmove(&vector.data[index + 1], &vector.data[index], (vector.length - index) * sizeof(*vector.data));                                                                                                                                     \
-    vector.data[index] = value;                                                                                                                                                                                                                \
-    vector.length++;                                                                                                                                                                                                                           \
-    &value;                                                                                                                                                                                                                                    \
+#define VecInsert(vector, value, index) \
+  ({ \
+    assert(index <= vector.length && "Index out of bounds for insertion"); \
+    if (vector.length >= vector.capacity) { \
+      if (vector.capacity == 0) vector.capacity = 2; \
+      else vector.capacity *= 2; \
+      vector.data = realloc(vector.data, vector.capacity * sizeof(*vector.data)); \
+    } \
+    memmove(&vector.data[index + 1], &vector.data[index], (vector.length - index) * sizeof(*vector.data)); \
+    vector.data[index] = value; \
+    vector.length++; \
+    &value; \
   })
 
-#define VecAt(vector, index)                                                                                                                                                                                                                   \
-  ({                                                                                                                                                                                                                                           \
-    assert(index >= 0 && index < vector.length && "Index out of bounds");                                                                                                                                                                      \
-    &vector.data[index];                                                                                                                                                                                                                       \
+#define VecAt(vector, index) \
+  ({ \
+    assert(index >= 0 && index < vector.length && "Index out of bounds"); \
+    &vector.data[index]; \
   })
 
-#define VecFree(vector)                                                                                                                                                                                                                        \
-  ({                                                                                                                                                                                                                                           \
-    assert(vector.data != NULL && "Vector data should never be NULL");                                                                                                                                                                         \
-    free(vector.data);                                                                                                                                                                                                                         \
-    vector.data = NULL;                                                                                                                                                                                                                        \
+#define VecFree(vector) \
+  ({ \
+    assert(vector.data != NULL && "Vector data should never be NULL"); \
+    free(vector.data); \
+    vector.data = NULL; \
   })
 
 /* --- Time and Platforms --- */
@@ -343,13 +343,13 @@ String s(char *msg);
 String F(Arena *arena, const char *format, ...) FORMAT_CHECK(2, 3);
 
 VEC_TYPE(StringVector, String);
-#define StringVectorPushMany(vector, ...)                                                                                                                                                                                                      \
-  ({                                                                                                                                                                                                                                           \
-    char *values[] = {__VA_ARGS__};                                                                                                                                                                                                            \
-    size_t count = sizeof(values) / sizeof(values[0]);                                                                                                                                                                                         \
-    for (size_t i = 0; i < count; i++) {                                                                                                                                                                                                       \
-      VecPush(vector, s(values[i]));                                                                                                                                                                                                           \
-    }                                                                                                                                                                                                                                          \
+#define StringVectorPushMany(vector, ...) \
+  ({ \
+    char *values[] = {__VA_ARGS__}; \
+    size_t count = sizeof(values) / sizeof(values[0]); \
+    for (size_t i = 0; i < count; i++) { \
+      VecPush(vector, s(values[i])); \
+    } \
   })
 
 void SetMaxStrSize(size_t size);
@@ -444,9 +444,9 @@ void LogInit();
 #define defer __DEFER(__COUNTER__)
 #define __DEFER(N) __DEFER_(N)
 #define __DEFER_(N) __DEFER__(__DEFER_FUNCTION_##N, __DEFER_VARIABLE_##N)
-#define __DEFER__(F, V)                                                                                                                                                                                                                        \
-  auto void F(int *);                                                                                                                                                                                                                          \
-  [[gnu::cleanup(F)]] int V;                                                                                                                                                                                                                   \
+#define __DEFER__(F, V) \
+  auto void F(int *); \
+  [[gnu::cleanup(F)]] int V; \
   auto void F(int *)
 
 /* - Clang implementation -
@@ -963,7 +963,7 @@ i32 RandomInteger(i32 min, i32 max) {
 
 f32 RandomFloat(f32 min, f32 max) {
   assert(min <= max && "min must be less than or equal to max");
-  f32 normalized = (f32)rand() / RAND_MAX;
+  f32 normalized = (f32)rand() / (f32)RAND_MAX;
   return min + normalized * (max - min);
 }
 
