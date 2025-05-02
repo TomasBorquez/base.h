@@ -1,7 +1,7 @@
 /* MIT License
 
   base.h - Better cross-platform std
-  Version - 2025-05-02 (0.1.6):
+  Version - 2025-05-02 (0.1.7):
   https://github.com/TomasBorquez/base.h
 
   Usage:
@@ -408,6 +408,9 @@ errno_t FileRead(Arena *arena, String *path, String *result);
 // TODO: enum FileWriteError {};
 errno_t FileWrite(String *path, String *data);
 
+// TODO: enum FileWriteAdd {};
+errno_t FileAdd(String *path, String *data); // NOTE: Adds `\n` at the end always
+
 // TODO: enum FileDeleteError {};
 errno_t FileDelete(String *path);
 
@@ -482,7 +485,7 @@ static inline void __df_cb(__df_t *__fp) {
 
 /*
   Implementation of base.h
-  Version - 2025-05-02 (0.1.6):
+  Version - 2025-05-02 (0.1.7):
   https://github.com/TomasBorquez/base.h
 */
 #ifdef BASE_IMPLEMENTATION
@@ -1211,7 +1214,7 @@ errno_t FileRead(Arena *arena, String *path, String *result) {
   return SUCCESS;
 }
 
-errno_t FileWrite(String *path, String *result) {
+errno_t FileWrite(String *path, String *data) {
   HANDLE hFile = INVALID_HANDLE_VALUE;
 
   char *pathStr = malloc(path->length + 1);
@@ -1243,7 +1246,7 @@ errno_t FileWrite(String *path, String *result) {
   }
 
   DWORD bytesWritten;
-  if (!WriteFile(hFile, result->data, (DWORD)result->length, &bytesWritten, NULL) || bytesWritten != result->length) {
+  if (!WriteFile(hFile, data->data, (DWORD)data->length, &bytesWritten, NULL) || bytesWritten != data->length) {
     DWORD error = GetLastError();
     CloseHandle(hFile);
     free(pathStr);
@@ -1262,6 +1265,77 @@ errno_t FileWrite(String *path, String *result) {
   CloseHandle(hFile);
   free(pathStr);
 
+  return SUCCESS;
+}
+
+errno_t FileAdd(String *path, String *data) {
+  HANDLE hFile = INVALID_HANDLE_VALUE;
+  char *pathStr = malloc(path->length + 1);
+  if (!pathStr) {
+    LogError("Memory allocation failed");
+    return ENOMEM;
+  }
+
+  memcpy(pathStr, path->data, path->length);
+  pathStr[path->length] = '\0';
+
+  hFile = CreateFileA(pathStr, GENERIC_WRITE, 0, NULL, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+  if (hFile == INVALID_HANDLE_VALUE) {
+    DWORD error = GetLastError();
+    free(pathStr);
+    switch (error) {
+    case ERROR_ACCESS_DENIED:
+      return EACCES;
+    case ERROR_NOT_ENOUGH_MEMORY:
+    case ERROR_OUTOFMEMORY:
+      return ENOMEM;
+    case ERROR_FILE_NOT_FOUND:
+      return ENOENT;
+    default:
+      return EIO;
+    }
+  }
+
+  if (SetFilePointer(hFile, 0, NULL, FILE_END) == INVALID_SET_FILE_POINTER) {
+    DWORD error = GetLastError();
+    CloseHandle(hFile);
+    free(pathStr);
+    return EIO;
+  }
+
+  char *newData = malloc(data->length + 2); // NOTE: +2 for \r\n
+  if (!newData) {
+    CloseHandle(hFile);
+    free(pathStr);
+    LogError("Memory allocation failed");
+    return ENOMEM;
+  }
+
+  memcpy(newData, data->data, data->length);
+  newData[data->length] = '\r';
+  newData[data->length + 1] = '\n';
+
+  DWORD newLength = (DWORD)data->length + 2;
+  DWORD bytesWritten;
+  if (!WriteFile(hFile, newData, newLength, &bytesWritten, NULL) || bytesWritten != newLength) {
+    DWORD error = GetLastError();
+    CloseHandle(hFile);
+    free(pathStr);
+    free(newData);
+    switch (error) {
+    case ERROR_DISK_FULL:
+      return ENOSPC;
+    case ERROR_NOT_ENOUGH_MEMORY:
+    case ERROR_OUTOFMEMORY:
+      return ENOMEM;
+    default:
+      return EIO;
+    }
+  }
+
+  CloseHandle(hFile);
+  free(pathStr);
+  free(newData);
   return SUCCESS;
 }
 

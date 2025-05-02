@@ -6,6 +6,7 @@
     - [x] `GeneralError`
     - [x] `FileStatsError`
     - [x] `FileReadError`
+    - [ ] `FileAddError`
     - [ ] `FileWriteError`
     - [ ] `FileDeleteError`
     - [ ] `FileRenameError`
