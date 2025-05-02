@@ -1,0 +1,25 @@
+# TODO:
+- [x] Return `errno_t` and `LogError` rather than asserting
+- [x] Add version at the top of the file and add proper license
+- [x] More general unix functions
+- [ ] Create enums of errors:
+    - [x] `GeneralError`
+    - [x] `FileStatsError`
+    - [x] `FileReadError`
+    - [ ] `FileWriteError`
+    - [ ] `FileDeleteError`
+    - [ ] `FileRenameError`
+    - [ ] `CreateCompileCommands`
+- [ ] Add equivalent FileSystem implementation for linux
+- [ ] Assert `Malloc` and `ArenaAlloc`, use `Malloc` and `Free`
+- [ ] Test on `Clang`, `GCC` and `MSVC` on windows
+- [ ] Test on `Clang` and `GCC` on linux
+- [ ] Add `TCC` support
+- [ ] Make GNU extensions work in both MSVC and Clang
+    - [ ] Vectors (https://nullprogram.com/blog/2025/01/19/)
+    - [ ] etc
+- [ ] Static `MAX_PATH` is fragile:
+    - [ ] https://eklitzke.org/path-max-is-tricky
+    - [ ] `wide paths` UTF16 on windows
+- [ ] `System()` to run commands is fragile
+    - [ ] Depends on the OS shell syntax which is not portable. It should use platform primitives such as CreateProcess on windows and fork+exec (or posix_spawn) on unix.

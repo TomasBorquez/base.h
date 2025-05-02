@@ -45,23 +45,3 @@ And for keeping it updated you can:
 ```C 
 git submodule update --init
 ```
-
-# TODO:
-- [x] Return `errno_t` and `LogError` rather than asserting
-- [x] Add version at the top of the file and add proper license
-- [x] More general unix functions
-- [ ] Create enums of errors:
-    - [x] `GeneralError`
-    - [x] `FileStatsError`
-    - [x] `FileReadError`
-    - [ ] `FileWriteError`
-    - [ ] `FileDeleteError`
-    - [ ] `FileRenameError`
-    - [ ] `CreateCompileCommands`
-- [ ] Add equivalent FileSystem implementation for linux
-- [ ] Assert `Malloc` and `ArenaAlloc`, use `Malloc` and `Free`
-- [ ] Make GNU extensions work in both MSVC and Clang (ex: Vectors)
-- [ ] Test on `Clang`, `GCC` and `MSVC` on windows
-- [ ] Test on `Clang` and `GCC` on linux
-- [ ] Add `TCC` support
-- [ ] Optimize String functions and add better names
