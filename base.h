@@ -1,7 +1,7 @@
 /* MIT License
 
-  base.h - Better cross-platform std
-  Version - 2025-05-02 (0.1.7):
+  base.h - Better cross-platform STD
+  Version - 2025-05-03 (0.1.8):
   https://github.com/TomasBorquez/base.h
 
   Usage:
@@ -10,6 +10,7 @@
 
   More on the the `README.md`
 */
+
 #pragma once
 
 /* --- Platform MACROS and includes --- */
@@ -31,16 +32,19 @@
 #error "The codebase only supports windows and linux, macos soon"
 #endif
 
-#ifdef COMPILER_CLANG
+#if defined(COMPILER_CLANG)
 #define FILE_NAME __FILE_NAME__
 #else
 #define FILE_NAME __FILE__
 #endif
 
-#ifdef PLATFORM_WIN
+#if defined(PLATFORM_WIN)
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
-#elif def PLATFORM_LINUX
+#elif defined(PLATFORM_LINUX)
+#include <fcntl.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 #include <unistd.h>
 #endif
 
@@ -80,6 +84,7 @@
 #include <assert.h>
 #include <ctype.h>
 #include <errno.h>
+#include <limits.h>
 #include <stdarg.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -88,7 +93,7 @@
 #include <time.h>
 
 /* --- Platform Specific --- */
-#ifdef PLATFORM_WIN
+#if defined(PLATFORM_WIN)
 /* Process functions */
 #define popen _popen
 #define pclose _pclose
@@ -134,7 +139,7 @@
 #define STDERR_FILENO 2
 
 /* Some functions need complete replacements */
-#ifdef COMPILER_MSVC
+#if defined(COMPILER_MSVC)
 #define snprintf _snprintf
 #define vsnprintf _vsnprintf
 #endif
@@ -323,7 +328,7 @@ void ArenaReset(Arena *arena);
 #define S(string) (TYPE_INIT(String){.length = STRING_LENGTH(ENSURE_STRING_LITERAL(string)), .data = (string)})
 String s(char *msg);
 
-#ifdef COMPILER_CLANG
+#if defined(COMPILER_CLANG)
 #define FORMAT_CHECK(fmt_pos, args_pos) __attribute__((format(printf, fmt_pos, args_pos))) // NOTE: Printf like warnings on format
 #else
 #define FORMAT_CHECK(fmt_pos, args_pos)
@@ -388,11 +393,6 @@ typedef struct {
   size_t totalCount;
 } FileData;
 
-#ifndef MAX_PATH
-#define MAX_PATH 260
-#endif
-extern char currentPath[MAX_PATH];
-
 char *GetCwd();
 void SetCwd(char *destination);
 FileData *GetDirFiles();
@@ -443,12 +443,12 @@ void LogInit();
   })
 
 /* --- Defer Macros --- */
-#ifdef DEFER_MACRO // NOTE: Optional since not all compilers support it and not all C versions do either
+#if defined(DEFER_MACRO) // NOTE: Optional since not all compilers support it and not all C versions do either
 
 /* - GCC implementation -
   NOTE: Must use C23 (depending on the platform)
 */
-#ifdef COMPILER_GCC
+#if defined(COMPILER_GCC)
 #define defer __DEFER(__COUNTER__)
 #define __DEFER(N) __DEFER_(N)
 #define __DEFER_(N) __DEFER__(__DEFER_FUNCTION_##N, __DEFER_VARIABLE_##N)
@@ -484,10 +484,10 @@ static inline void __df_cb(__df_t *__fp) {
 
 /*
   Implementation of base.h
-  Version - 2025-05-02 (0.1.7):
+  Version - 2025-05-03 (0.1.8):
   https://github.com/TomasBorquez/base.h
 */
-#ifdef BASE_IMPLEMENTATION
+#if defined(BASE_IMPLEMENTATION)
 
 // --- Platform specific functions ---
 #if !defined(PLATFORM_WIN) && !defined(C_STANDARD_C11)
@@ -567,7 +567,7 @@ String GetPlatform() {
 }
 
 i64 TimeNow() {
-#ifdef PLATFORM_WIN
+#if defined(PLATFORM_WIN)
   FILETIME ft;
   GetSystemTimeAsFileTime(&ft);
   LARGE_INTEGER li;
@@ -586,7 +586,7 @@ i64 TimeNow() {
 }
 
 void WaitTime(i64 ms) {
-#ifdef PLATFORM_WIN
+#if defined(PLATFORM_WIN)
   Sleep(ms);
 #else
   struct timespec ts;
@@ -980,16 +980,17 @@ f32 RandomFloat(f32 min, f32 max) {
 }
 
 /* File Implementation */
-#ifdef PLATFORM_WIN
-char currentPath[MAX_PATH];
+#if defined(PLATFORM_WIN)
 char *GetCwd() {
+  static _Thread_local char currentPath[MAX_PATH];
   DWORD length = GetCurrentDirectory(MAX_PATH, currentPath);
   if (length == 0) {
     printf("Error getting current directory: %lu\n", GetLastError());
-    return "";
+    currentPath[0] = '\0';
   }
   return currentPath;
 }
+
 void SetCwd(char *destination) {
   bool result = SetCurrentDirectory(destination);
   if (!result) {
@@ -1003,7 +1004,7 @@ FileData *GetDirFiles() {
   HANDLE hFind;
   char searchPath[MAX_PATH];
   FileData *fileData = NewFileData();
-  i32 result = snprintf(searchPath, MAX_PATH - 2, "%s\\*", currentPath);
+  i32 result = snprintf(searchPath, MAX_PATH - 2, "%s\\*", GetCwd());
   assert(result >= 0 && "sprint should not return error");
 
   hFind = FindFirstFile(searchPath, &findData);
@@ -1388,20 +1389,228 @@ bool Mkdir(String path) {
   return false;
 }
 
-#elif def PLATFORM_LINUX
-char currentPath[PATH_MAX];
+#elif defined(PLATFORM_LINUX)
 char *GetCwd() {
+  static _Thread_local char currentPath[PATH_MAX];
   if (getcwd(currentPath, PATH_MAX) == NULL) {
     printf("Error getting current directory: %s\n", strerror(errno));
-    return "";
+    currentPath[0] = '\0';
   }
   return currentPath;
 }
+
 void SetCwd(char *destination) {
   if (chdir(destination) != 0) {
     printf("Error setting cwd: %s\n", strerror(errno));
   }
   GetCwd();
+}
+
+errno_t FileStats(String *path, File *result) {
+  struct stat fileStat;
+
+  char *pathStr = malloc(path->length + 1);
+  if (!pathStr) {
+    LogError("Memory allocation failed");
+    return MEMORY_ALLOCATION_FAILED;
+  }
+
+  memcpy(pathStr, path->data, path->length);
+  pathStr[path->length] = '\0';
+
+  if (stat(pathStr, &fileStat) != 0) {
+    LogError("Failed to get file attributes: %d", errno);
+    free(pathStr);
+    return FILE_GET_ATTRIBUTES_FAILED;
+  }
+
+  char *nameStart = strrchr(pathStr, '/');
+  if (nameStart) {
+    nameStart++;
+  } else {
+    nameStart = pathStr;
+  }
+
+  result->name = strdup(nameStart);
+
+  char *extStart = strrchr(nameStart, '.');
+  if (extStart) {
+    result->extension = strdup(extStart + 1);
+  } else {
+    result->extension = strdup("");
+  }
+
+  result->size = fileStat.st_size;
+  result->createTime = fileStat.st_ctime; // Creation time (may be change time on some Unix systems)
+  result->modifyTime = fileStat.st_mtime; // Modification time
+
+  free(pathStr);
+  return SUCCESS;
+}
+
+errno_t FileRead(Arena *arena, String *path, String *result) {
+  i32 fd = -1;
+
+  char *pathStr = malloc(path->length + 1);
+  if (!pathStr) {
+    LogError("Memory allocation failed");
+    return MEMORY_ALLOCATION_FAILED;
+  }
+
+  memcpy(pathStr, path->data, path->length);
+  pathStr[path->length] = '\0';
+
+  fd = open(pathStr, O_RDONLY);
+  if (fd == -1) {
+    int error = errno;
+    free(pathStr);
+
+    if (error == ENOENT) {
+      return FILE_NOT_EXIST;
+    }
+
+    LogError("File open failed, err: %d", error);
+    return FILE_OPEN_FAILED;
+  }
+
+  struct stat fileStat;
+  if (fstat(fd, &fileStat) != 0) {
+    LogError("Failed to get file size: %d", errno);
+    close(fd);
+    free(pathStr);
+    return FILE_GET_SIZE_FAILED;
+  }
+
+  off_t fileSize = fileStat.st_size;
+  char *buffer = (char *)ArenaAlloc(arena, fileSize);
+  ssize_t bytesRead = read(fd, buffer, fileSize);
+  if (bytesRead != fileSize) {
+    LogError("Failed to read file: %d", errno);
+    close(fd);
+    free(pathStr);
+    return FILE_READ_FAILED;
+  }
+
+  *result = (String){.length = bytesRead, .data = buffer};
+
+  close(fd);
+  free(pathStr);
+  return SUCCESS;
+}
+
+errno_t FileWrite(String *path, String *data) {
+  i32 fd = -1;
+
+  char *pathStr = malloc(path->length + 1);
+  if (!pathStr) {
+    LogError("Memory allocation failed");
+    return ENOMEM;
+  }
+
+  memcpy(pathStr, path->data, path->length);
+  pathStr[path->length] = '\0';
+
+  fd = open(pathStr, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+  if (fd == -1) {
+    i32 error = errno;
+    free(pathStr);
+
+    switch (error) {
+    case EACCES:
+      return EACCES;
+    case ENOMEM:
+      return ENOMEM;
+    case ENOENT:
+      return ENOENT;
+    default:
+      return EIO;
+    }
+  }
+
+  ssize_t bytesWritten = write(fd, data->data, data->length);
+  if (bytesWritten != data->length) {
+    int error = errno;
+    close(fd);
+    free(pathStr);
+
+    switch (error) {
+    case ENOSPC:
+      return ENOSPC;
+    case ENOMEM:
+      return ENOMEM;
+    default:
+      return EIO;
+    }
+  }
+
+  close(fd);
+  free(pathStr);
+
+  return SUCCESS;
+}
+
+errno_t FileAdd(String *path, String *data) {
+  i32 fd = -1;
+
+  char *pathStr = malloc(path->length + 1);
+  if (!pathStr) {
+    LogError("Memory allocation failed");
+    return ENOMEM;
+  }
+
+  memcpy(pathStr, path->data, path->length);
+  pathStr[path->length] = '\0';
+
+  fd = open(pathStr, O_WRONLY | O_APPEND | O_CREAT, 0644);
+  if (fd == -1) {
+    int error = errno;
+    free(pathStr);
+
+    switch (error) {
+    case EACCES:
+      return EACCES;
+    case ENOMEM:
+      return ENOMEM;
+    case ENOENT:
+      return ENOENT;
+    default:
+      return EIO;
+    }
+  }
+
+  char *newData = malloc(data->length + 1); // +1 for \n
+  if (!newData) {
+    close(fd);
+    free(pathStr);
+    LogError("Memory allocation failed");
+    return ENOMEM;
+  }
+
+  memcpy(newData, data->data, data->length);
+  newData[data->length] = '\n';
+  size_t newLength = data->length + 1;
+
+  ssize_t bytesWritten = write(fd, newData, newLength);
+  if (bytesWritten != newLength) {
+    int error = errno;
+    close(fd);
+    free(pathStr);
+    free(newData);
+
+    switch (error) {
+    case ENOSPC:
+      return ENOSPC;
+    case ENOMEM:
+      return ENOMEM;
+    default:
+      return EIO;
+    }
+  }
+
+  close(fd);
+  free(pathStr);
+  free(newData);
+  return SUCCESS;
 }
 #endif
 
@@ -1443,7 +1652,7 @@ void LogSuccess(const char *format, ...) {
 }
 
 void LogInit() {
-#ifdef PLATFORM_WIN
+#if defined(PLATFORM_WIN)
   HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
   DWORD dwMode = 0;
   GetConsoleMode(hOut, &dwMode);
