@@ -10,7 +10,6 @@
 
   More on the the `README.md`
 */
-
 #pragma once
 
 /* --- Platform MACROS and includes --- */
@@ -1275,7 +1274,6 @@ errno_t FileAdd(String *path, String *data) {
     LogError("Memory allocation failed");
     return ENOMEM;
   }
-
   memcpy(pathStr, path->data, path->length);
   pathStr[path->length] = '\0';
 
@@ -1303,7 +1301,7 @@ errno_t FileAdd(String *path, String *data) {
     return EIO;
   }
 
-  char *newData = malloc(data->length + 2); // NOTE: +2 for \r\n
+  char *newData = malloc(data->length + 1); // NOTE: +1 for \n
   if (!newData) {
     CloseHandle(hFile);
     free(pathStr);
@@ -1312,10 +1310,8 @@ errno_t FileAdd(String *path, String *data) {
   }
 
   memcpy(newData, data->data, data->length);
-  newData[data->length] = '\r';
-  newData[data->length + 1] = '\n';
-
-  DWORD newLength = (DWORD)data->length + 2;
+  newData[data->length] = '\n';
+  DWORD newLength = (DWORD)data->length + 1;
   DWORD bytesWritten;
   if (!WriteFile(hFile, newData, newLength, &bytesWritten, NULL) || bytesWritten != newLength) {
     DWORD error = GetLastError();
