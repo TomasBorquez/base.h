@@ -1,7 +1,7 @@
 /* MIT License
 
   base.h - Better cross-platform STD
-  Version - 2025-05-03 (0.1.8):
+  Version - 2025-05-03 (0.1.9):
   https://github.com/TomasBorquez/base.h
 
   Usage:
@@ -482,10 +482,9 @@ static inline void __df_cb(__df_t *__fp) {
 
 #endif
 
-/*
-  Implementation of base.h
-  Version - 2025-05-03 (0.1.8):
-  https://github.com/TomasBorquez/base.h
+/* MIT License
+   base.h - Implementation of base.h
+   https://github.com/TomasBorquez/base.h
 */
 #if defined(BASE_IMPLEMENTATION)
 

@@ -20,7 +20,7 @@
     - [ ] Vectors (https://nullprogram.com/blog/2025/01/19/)
     - [ ] etc
 - [ ] Static `MAX_PATH` is fragile:
-    - [ ] https://eklitzke.org/path-max-is-tricky
+    - [ ] https://eklitzke.org/path-max-is-tricky (GNU extension `char *get_current_dir_name()` dynamic length)
     - [ ] `wide paths` UTF16 on windows
 - [ ] `System()` to run commands is fragile
     - [ ] Depends on the OS shell syntax which is not portable. It should use platform primitives such as CreateProcess on windows and fork+exec (or posix_spawn) on unix.
