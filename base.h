@@ -12,6 +12,10 @@
 */
 #pragma once
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /* --- Platform MACROS and includes --- */
 #if defined(__clang__)
 #  define COMPILER_CLANG
@@ -21,6 +25,18 @@
 #  define COMPILER_GCC
 #else
 #  error "The codebase only supports Clang, MSVC and GCC. TCC soon"
+#endif
+
+#ifdef __GNUC__
+#define _BASE_NORETURN __attribute__((noreturn))
+#define _BASE_UNLIKELY(x) __builtin_expect(!!(x), 0)
+#define _BASE_ALLOC_ATTR2(sz, al) __attribute__((malloc, alloc_size(sz), alloc_align(al)))
+#define _BASE_ALLOC_ATTR(sz) __attribute__((malloc, alloc_size(sz)))
+#else
+#define _BASE_NORETURN __declspec(noreturn)
+#define _BASE_UNLIKELY(x) x
+#define _BASE_ALLOC_ATTR2(sz, al)
+#define _BASE_ALLOC_ATTR(sz)
 #endif
 
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32__)
@@ -90,6 +106,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #include <string.h>
 #include <time.h>
 
@@ -169,11 +186,6 @@ typedef int64_t i64;
 // Floating point types
 typedef float f32;
 typedef double f64;
-
-// Boolean defines
-#define bool _Bool
-#define false 0
-#define true 1
 
 typedef struct {
   size_t length; // Does not include null terminator
@@ -291,6 +303,9 @@ typedef struct {
     vector.data = NULL;                                                         \
   })
 
+#define VecForEach(vector, it)                                                             \
+  for(typeof(vector.data) it = vector.data; it && it != vector.data + vector.length; ++it)
+
 /* --- Time and Platforms --- */
 i64 TimeNow();
 void WaitTime(i64 ms);
@@ -306,18 +321,26 @@ enum GeneralError {
 };
 
 /* --- Arena --- */
+typedef struct __ArenaChunk {
+  struct __ArenaChunk *next;
+  size_t cap;
+  char buffer[];
+} __ArenaChunk;
+
 typedef struct {
-  int8_t *buffer;
-  size_t bufferLength;
-  size_t prevOffset;
-  size_t currOffset;
+  __ArenaChunk *current;
+  size_t offset;
+  __ArenaChunk *root;
+  size_t chunkSize;
 } Arena;
 
 // This makes sure right alignment on 86/64 bits
 #define DEFAULT_ALIGNMENT (2 * sizeof(void *))
 
-Arena ArenaInit(size_t size);
-void *ArenaAlloc(Arena *arena, size_t size);
+Arena* ArenaCreate(size_t chunkSize);
+_BASE_ALLOC_ATTR2(2, 3) void *ArenaAllocAligned(Arena *arena, size_t size, size_t align);
+_BASE_ALLOC_ATTR(2) char *ArenaAllocChars(Arena *arena, size_t count);
+_BASE_ALLOC_ATTR(2) void *ArenaAlloc(Arena *arena, size_t size);
 void ArenaFree(Arena *arena);
 void ArenaReset(Arena *arena);
 
@@ -601,59 +624,68 @@ void WaitTime(i64 ms) {
 #  endif
 }
 
-/* Arena Implemenation */
-// https://www.gingerbill.org/article/2019/02/08/memory-allocation-strategies-002/
-static intptr_t alignForward(const intptr_t ptr) {
-  intptr_t p, a, modulo;
-
-  p = ptr;
-  a = (intptr_t)DEFAULT_ALIGNMENT;
-  // Same as (p % a) but faster as 'a' is a power of two
-  modulo = p & (a - 1);
-
-  if (modulo != 0) {
-    // If 'p' address is not aligned, push the address to the
-    // next value which is aligned
-    p += a - modulo;
+// Allocate or iterate to next chunk that can fit `bytes`
+void __ArenaNextChunk(Arena *arena, size_t bytes) {
+  __ArenaChunk* next = arena->current ? arena->current->next : NULL;
+  while(next) {
+    if (next->cap > bytes) {
+      arena->current = next;
+      return;
+    }
+    next = next->next;
   }
-  return p;
+  next = (__ArenaChunk*)Malloc(sizeof(__ArenaChunk) + bytes);
+  next->cap = bytes;
+  next->next = NULL;
+  if (arena->current) arena->current->next = next;
+  arena->current = next;
+}
+
+void *ArenaAllocAligned(Arena *arena, size_t size, size_t al) {
+  // Align 'currPtr' forward to the specified alignment
+  intptr_t tail = arena->offset & (al - 1);
+  intptr_t aligned = tail ? arena->offset + al - arena->offset : arena->offset;
+  arena->offset = aligned + size;
+  void *result;
+  if (arena->offset > arena->current->cap) {
+    __ArenaNextChunk(arena, size > arena->chunkSize ? size : arena->chunkSize);
+    result = arena->current->buffer;
+  } else {
+    result = arena->current->buffer + aligned;
+  }
+  if (size) memset(result, 0, size);
+  return result;
+}
+
+char *ArenaAllocChars(Arena *arena, size_t count) {
+  return (char*)ArenaAllocAligned(arena, count, 1);
 }
 
 void *ArenaAlloc(Arena *arena, const size_t size) {
-  // Align 'currPtr' forward to the specified alignment
-  intptr_t currPtr = (intptr_t)arena->buffer + (intptr_t)arena->currOffset;
-  intptr_t offset = alignForward(currPtr);
-  offset -= (intptr_t)arena->buffer; // Change to relative offset
-
-  if (offset + size > arena->bufferLength) {
-    LogError("Arena ran out of space left, bufferLength: %zu", arena->bufferLength);
-    return NULL;
-  }
-
-  void *ptr = &arena->buffer[offset];
-  arena->prevOffset = offset;
-  arena->currOffset = offset + size;
-
-  memset(ptr, 0, size);
-  return ptr;
+  return ArenaAllocAligned(arena, size, DEFAULT_ALIGNMENT);
 }
 
 void ArenaFree(Arena *arena) {
-  free(arena->buffer);
+  __ArenaChunk* chunk = arena->root;
+  while(chunk) {
+    free(chunk);
+    chunk = chunk->next;
+  }
+  free(arena);
 }
 
 void ArenaReset(Arena *arena) {
-  arena->currOffset = 0;
-  arena->prevOffset = 0;
+  arena->current = arena->root;
+  arena->offset = 0;
 }
 
-Arena ArenaInit(size_t size) {
-  return (Arena){
-      .buffer = (i8 *)Malloc(size),
-      .bufferLength = size,
-      .prevOffset = 0,
-      .currOffset = 0,
-  };
+Arena* ArenaCreate(size_t chunkSize) {
+  Arena* res = (Arena*)Malloc(sizeof(Arena));
+  memset(res, 0, sizeof(*res));
+  res->chunkSize = chunkSize;
+  __ArenaNextChunk(res, chunkSize);
+  res->root = res->current;
+  return res;
 }
 
 /* Memory Allocations */
@@ -708,7 +740,7 @@ void SetMaxStrSize(size_t size) {
 
 String StrNewSize(Arena *arena, char *str, size_t len) {
   const size_t memorySize = sizeof(char) * len + 1; // NOTE: Includes null terminator
-  char *allocatedString = ArenaAlloc(arena, memorySize);
+  char *allocatedString = ArenaAllocChars(arena, memorySize);
 
   memcpy(allocatedString, str, memorySize);
   addNullTerminator(allocatedString, len);
@@ -721,7 +753,7 @@ String StrNew(Arena *arena, char *str) {
     return (String){0, NULL};
   }
   const size_t memorySize = sizeof(char) * len + 1; // NOTE: Includes null terminator
-  char *allocatedString = ArenaAlloc(arena, memorySize);
+  char *allocatedString = ArenaAllocChars(arena, memorySize);
 
   memcpy(allocatedString, str, memorySize);
   addNullTerminator(allocatedString, len);
@@ -741,7 +773,7 @@ String StrConcat(Arena *arena, String *string1, String *string2) {
 
   const size_t len = string1->length + string2->length;
   const size_t memorySize = sizeof(char) * len + 1; // NOTE: Includes null terminator
-  char *allocatedString = ArenaAlloc(arena, memorySize);
+  char *allocatedString = ArenaAllocChars(arena, memorySize);
 
   memcpy_s(allocatedString, memorySize, string1->data, string1->length);
   memcpy_s(allocatedString + string1->length, memorySize, string2->data, string2->length);
@@ -1747,5 +1779,9 @@ void LogInit() {
   dwMode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
   SetConsoleMode(hOut, dwMode);
 #  endif
+}
+#endif
+
+#ifdef __cplusplus
 }
 #endif
