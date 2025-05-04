@@ -628,11 +628,11 @@ void WaitTime(i64 ms) {
 void __ArenaNextChunk(Arena *arena, size_t bytes) {
   __ArenaChunk* next = arena->current ? arena->current->next : NULL;
   while(next) {
-    if (next->cap > bytes) {
-      arena->current = next;
+    arena->current = next;
+    if (arena->current->cap > bytes) {
       return;
     }
-    next = next->next;
+    next = arena->current->next;
   }
   next = (__ArenaChunk*)Malloc(sizeof(__ArenaChunk) + bytes);
   next->cap = bytes;
@@ -668,8 +668,9 @@ void *ArenaAlloc(Arena *arena, const size_t size) {
 void ArenaFree(Arena *arena) {
   __ArenaChunk* chunk = arena->root;
   while(chunk) {
+    __ArenaChunk* next = chunk->next;
     free(chunk);
-    chunk = chunk->next;
+    chunk = next;
   }
   free(arena);
 }
