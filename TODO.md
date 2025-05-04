@@ -2,23 +2,22 @@
 - [x] Return `errno_t` and `LogError` rather than asserting
 - [x] Add version at the top of the file and add proper license
 - [x] More general unix functions
-- [ ] Create enums of errors:
+- [x] Create enums of errors:
     - [x] `GeneralError`
     - [x] `FileStatsError`
     - [x] `FileReadError`
-    - [ ] `FileAddError`
-    - [ ] `FileWriteError`
-    - [ ] `FileDeleteError`
-    - [ ] `FileRenameError`
-    - [ ] `CreateCompileCommands`
-- [ ] Add equivalent FileSystem implementation for linux
-- [ ] Assert `Malloc` and `ArenaAlloc`, use `Malloc` and `Free`
+    - [x] `FileAddError`
+    - [x] `FileWriteError`
+    - [x] `FileDeleteError`
+    - [x] `FileRenameError`
+- [x] Add equivalent FileSystem implementation for linux
+- [x] Assert `Malloc` and `ArenaAlloc`, use `Malloc` and `Free`
 - [ ] Test on `Clang`, `GCC` and `MSVC` on windows
 - [ ] Test on `Clang` and `GCC` on linux
 - [ ] Add `TCC` support
 - [ ] Make GNU extensions work in both MSVC and Clang
-    - [ ] Vectors (https://nullprogram.com/blog/2025/01/19/)
-    - [ ] etc
+    - [ ] Vectors
+    - [ ] ...
 - [ ] Static `MAX_PATH` is fragile:
     - [ ] https://eklitzke.org/path-max-is-tricky (GNU extension `char *get_current_dir_name()` dynamic length)
     - [ ] `wide paths` UTF16 on windows
