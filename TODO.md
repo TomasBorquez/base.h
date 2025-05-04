@@ -12,6 +12,8 @@
     - [x] `FileRenameError`
 - [x] Add equivalent FileSystem implementation for linux
 - [x] Assert `Malloc` and `ArenaAlloc`, use `Malloc` and `Free`
+- [ ] `StrSplit` malloc all strings, remove arena and create `StrVecFree`
+- [ ] Add a `StrSplitLine` helper function that works for `\r\n` and for `\n`
 - [ ] Test on `Clang`, `GCC` and `MSVC` on windows
 - [ ] Test on `Clang` and `GCC` on linux
 - [ ] Add `TCC` support
