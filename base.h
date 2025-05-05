@@ -517,7 +517,7 @@ static inline void __df_cb(__df_t *__fp) {
 */
 #if defined(BASE_IMPLEMENTATION)
 // --- Platform specific functions ---
-#  if !defined(PLATFORM_WIN) && !defined(C_STANDARD_C11)
+#  if !defined(PLATFORM_WIN)
 
 #    if !defined(EINVAL)
 #      define EINVAL 22 // Invalid argument
@@ -541,7 +541,7 @@ errno_t memcpy_s(void *dest, size_t destSize, const void *src, size_t count) {
   return 0;
 }
 
-inline errno_t fopen_s(FILE **streamptr, const char *filename, const char *mode) {
+errno_t fopen_s(FILE **streamptr, const char *filename, const char *mode) {
   if (streamptr == NULL) {
     return EINVAL;
   }
@@ -1262,7 +1262,7 @@ errno_t FileRead(Arena *arena, String *path, String *result) {
       return FILE_NOT_EXIST;
     }
 
-    LogError("File open failed, err: %lu", error);
+    LogError("File open failed, for %s, err: %lu", path->data, error);
     return FILE_OPEN_FAILED;
   }
 
@@ -1294,7 +1294,7 @@ errno_t FileWrite(String *path, String *data) {
 
   if (hFile == INVALID_HANDLE_VALUE) {
     DWORD error = GetLastError();
-    LogError("File open failed, err: %lu", error);
+    LogError("File open failed, for %s, err: %lu", path->data, error);
 
     switch (error) {
     case ERROR_ACCESS_DENIED:
@@ -1329,7 +1329,7 @@ errno_t FileAdd(String *path, String *data) {
   hFile = CreateFileA(path->data, GENERIC_WRITE, 0, NULL, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
   if (hFile == INVALID_HANDLE_VALUE) {
     DWORD error = GetLastError();
-    LogError("File open failed, err: %lu", error);
+    LogError("File open failed, for %s, err: %lu", path->data, error);
 
     switch (error) {
     case ERROR_ACCESS_DENIED:
@@ -1476,7 +1476,7 @@ errno_t FileRead(Arena *arena, String *path, String *result) {
       return FILE_NOT_EXIST;
     }
 
-    LogError("File open failed, err: %d", error);
+    LogError("File open failed, for %s, err: %lu", path->data, error);
     return FILE_OPEN_FAILED;
   }
 
@@ -1508,7 +1508,7 @@ errno_t FileWrite(String *path, String *data) {
   fd = open(path->data, O_WRONLY | O_CREAT | O_TRUNC, 0644);
   if (fd == -1) {
     i32 error = errno;
-    LogError("File open failed, err: %d", error);
+    LogError("File open failed, for %s, err: %lu", path->data, error);
 
     switch (error) {
     case EACCES:
@@ -1544,7 +1544,7 @@ errno_t FileAdd(String *path, String *data) {
   fd = open(path->data, O_WRONLY | O_APPEND | O_CREAT, 0644);
   if (fd == -1) {
     int error = errno;
-    LogError("File open failed, err: %d", error);
+    LogError("File open failed, for %s, err: %lu", path->data, error);
 
     switch (error) {
     case EACCES:
