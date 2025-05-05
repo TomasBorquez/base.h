@@ -391,6 +391,7 @@ void StrTrim(String *string);
 String StrSlice(Arena *arena, String *str, size_t start, size_t end);
 String ConvertExe(Arena *arena, String path);
 String ConvertPath(Arena *arena, String path);
+String ParsePath(Arena *arena, String path);
 
 /* --- Random --- */
 void RandomInit(); // NOTE: Must init before using
