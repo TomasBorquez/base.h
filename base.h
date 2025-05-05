@@ -305,7 +305,7 @@ typedef struct {
     vector.data = NULL;                                                         \
   })
 
-#define VecForEach(vector, it) for (typeof(vector.data) it = vector.data; it && it != vector.data + vector.length; ++it)
+#define VecForEach(vector, it) for (typeof(*vector.data) *it = vector.data; it < vector.data + vector.length; it++)
 
 /* --- Time and Platforms --- */
 i64 TimeNow();
