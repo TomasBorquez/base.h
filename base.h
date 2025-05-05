@@ -451,7 +451,7 @@ bool Mkdir(String path); // NOTE: Mkdir if not exist
 
 /* --- Logger --- */
 #define _RESET "\x1b[0m"
-#define _GRAY "\x1b[38;2;192;192;192m"
+#define _GRAY "\x1b[0;36m"
 #define _RED "\x1b[0;31m"
 #define _GREEN "\x1b[0;32m"
 #define _ORANGE "\x1b[0;33m"
