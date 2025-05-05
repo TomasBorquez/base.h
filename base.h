@@ -1,7 +1,7 @@
 /* MIT License
 
   base.h - Better cross-platform STD
-  Version - 2025-05-03 (0.1.10):
+  Version - 2025-05-05 (0.1.11):
   https://github.com/TomasBorquez/base.h
 
   Usage:
@@ -28,15 +28,15 @@ extern "C" {
 #endif
 
 #ifdef __GNUC__
-#define _BASE_NORETURN __attribute__((noreturn))
-#define _BASE_UNLIKELY(x) __builtin_expect(!!(x), 0)
-#define _BASE_ALLOC_ATTR2(sz, al) __attribute__((malloc, alloc_size(sz), alloc_align(al)))
-#define _BASE_ALLOC_ATTR(sz) __attribute__((malloc, alloc_size(sz)))
+#  define _BASE_NORETURN __attribute__((noreturn))
+#  define _BASE_UNLIKELY(x) __builtin_expect(!!(x), 0)
+#  define _BASE_ALLOC_ATTR2(sz, al) __attribute__((malloc, alloc_size(sz), alloc_align(al)))
+#  define _BASE_ALLOC_ATTR(sz) __attribute__((malloc, alloc_size(sz)))
 #else
-#define _BASE_NORETURN __declspec(noreturn)
-#define _BASE_UNLIKELY(x) x
-#define _BASE_ALLOC_ATTR2(sz, al)
-#define _BASE_ALLOC_ATTR(sz)
+#  define _BASE_NORETURN __declspec(noreturn)
+#  define _BASE_UNLIKELY(x) x
+#  define _BASE_ALLOC_ATTR2(sz, al)
+#  define _BASE_ALLOC_ATTR(sz)
 #endif
 
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32__)
@@ -57,6 +57,8 @@ extern "C" {
 #  define WIN32_LEAN_AND_MEAN
 #  include <windows.h>
 #elif defined(PLATFORM_LINUX)
+#  define _POSIX_C_SOURCE 200809L
+#  define _GNU_SOURCE
 #  include <dirent.h>
 #  include <fcntl.h>
 #  include <sys/stat.h>
@@ -102,11 +104,11 @@ extern "C" {
 #include <errno.h>
 #include <limits.h>
 #include <stdarg.h>
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdbool.h>
 #include <string.h>
 #include <time.h>
 
@@ -303,8 +305,7 @@ typedef struct {
     vector.data = NULL;                                                         \
   })
 
-#define VecForEach(vector, it)                                                             \
-  for(typeof(vector.data) it = vector.data; it && it != vector.data + vector.length; ++it)
+#define VecForEach(vector, it) for (typeof(vector.data) it = vector.data; it && it != vector.data + vector.length; ++it)
 
 /* --- Time and Platforms --- */
 i64 TimeNow();
@@ -337,7 +338,7 @@ typedef struct {
 // This makes sure right alignment on 86/64 bits
 #define DEFAULT_ALIGNMENT (2 * sizeof(void *))
 
-Arena* ArenaCreate(size_t chunkSize);
+Arena *ArenaCreate(size_t chunkSize);
 _BASE_ALLOC_ATTR2(2, 3) void *ArenaAllocAligned(Arena *arena, size_t size, size_t align);
 _BASE_ALLOC_ATTR(2) char *ArenaAllocChars(Arena *arena, size_t count);
 _BASE_ALLOC_ATTR(2) void *ArenaAlloc(Arena *arena, size_t size);
@@ -626,15 +627,15 @@ void WaitTime(i64 ms) {
 
 // Allocate or iterate to next chunk that can fit `bytes`
 void __ArenaNextChunk(Arena *arena, size_t bytes) {
-  __ArenaChunk* next = arena->current ? arena->current->next : NULL;
-  while(next) {
+  __ArenaChunk *next = arena->current ? arena->current->next : NULL;
+  while (next) {
     arena->current = next;
     if (arena->current->cap > bytes) {
       return;
     }
     next = arena->current->next;
   }
-  next = (__ArenaChunk*)Malloc(sizeof(__ArenaChunk) + bytes);
+  next = (__ArenaChunk *)Malloc(sizeof(__ArenaChunk) + bytes);
   next->cap = bytes;
   next->next = NULL;
   if (arena->current) arena->current->next = next;
@@ -658,7 +659,7 @@ void *ArenaAllocAligned(Arena *arena, size_t size, size_t al) {
 }
 
 char *ArenaAllocChars(Arena *arena, size_t count) {
-  return (char*)ArenaAllocAligned(arena, count, 1);
+  return (char *)ArenaAllocAligned(arena, count, 1);
 }
 
 void *ArenaAlloc(Arena *arena, const size_t size) {
@@ -666,9 +667,9 @@ void *ArenaAlloc(Arena *arena, const size_t size) {
 }
 
 void ArenaFree(Arena *arena) {
-  __ArenaChunk* chunk = arena->root;
-  while(chunk) {
-    __ArenaChunk* next = chunk->next;
+  __ArenaChunk *chunk = arena->root;
+  while (chunk) {
+    __ArenaChunk *next = chunk->next;
     free(chunk);
     chunk = next;
   }
@@ -680,8 +681,8 @@ void ArenaReset(Arena *arena) {
   arena->offset = 0;
 }
 
-Arena* ArenaCreate(size_t chunkSize) {
-  Arena* res = (Arena*)Malloc(sizeof(Arena));
+Arena *ArenaCreate(size_t chunkSize) {
+  Arena *res = (Arena *)Malloc(sizeof(Arena));
   memset(res, 0, sizeof(*res));
   res->chunkSize = chunkSize;
   __ArenaNextChunk(res, chunkSize);
