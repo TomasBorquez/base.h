@@ -12,10 +12,12 @@
     - [x] `FileRenameError`
 - [x] Add equivalent FileSystem implementation for linux
 - [x] Assert `Malloc` and `ArenaAlloc`, use `Malloc` and `Free`
+- [x] Add a `StrSplitLine` helper function that works for `\r\n` and for `\n`
+- [ ] Add better error logging, format `$function$: failed $path$ (or whatever params are passed), $error$` specially for file functions
+- [ ] Add some basic tests, and execute them on each PR
 - [ ] `StrSplit` malloc all strings, remove arena and create `StrVecFree`
-- [ ] Add a `StrSplitLine` helper function that works for `\r\n` and for `\n`
 - [ ] Test on `Clang`, `GCC` and `MSVC` on windows
-- [ ] Test on `Clang` and `GCC` on linux
+- [x] Test on `Clang` and `GCC` on linux
 - [ ] Add `TCC` support
 - [ ] Make GNU extensions work in both MSVC and Clang
     - [ ] Vectors
@@ -23,5 +25,5 @@
 - [ ] Static `MAX_PATH` is fragile:
     - [ ] https://eklitzke.org/path-max-is-tricky (GNU extension `char *get_current_dir_name()` dynamic length)
     - [ ] `wide paths` UTF16 on windows
-- [ ] `System()` to run commands is fragile
+- [ ] `System()` to run commands is fragile 
     - [ ] Depends on the OS shell syntax which is not portable. It should use platform primitives such as CreateProcess on windows and fork+exec (or posix_spawn) on unix.

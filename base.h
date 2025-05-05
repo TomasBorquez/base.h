@@ -771,8 +771,23 @@ String s(char *msg) {
 }
 
 String StrConcat(Arena *arena, String *string1, String *string2) {
-  assert(!StrIsNull(string1) && "StrConcat: string1 should never be NULL");
-  assert(!StrIsNull(string2) && "StrConcat: string2 should never be NULL");
+  if (StrIsNull(string1)) {
+    const size_t len = string2->length;
+    const size_t memorySize = sizeof(char) * len;
+    char *allocatedString = ArenaAllocChars(arena, memorySize);
+    memcpy_s(allocatedString, memorySize, string2->data, string2->length);
+    addNullTerminator(allocatedString, len);
+    return (String){len, allocatedString};
+  }
+
+  if (StrIsNull(string2)) {
+    const size_t len = string1->length;
+    const size_t memorySize = sizeof(char) * len;
+    char *allocatedString = ArenaAllocChars(arena, memorySize);
+    memcpy_s(allocatedString, memorySize, string1->data, string1->length);
+    addNullTerminator(allocatedString, len);
+    return (String){len, allocatedString};
+  }
 
   const size_t len = string1->length + string2->length;
   const size_t memorySize = sizeof(char) * len + 1; // NOTE: Includes null terminator
@@ -1344,6 +1359,7 @@ errno_t FileAdd(String *path, String *data) {
 
   if (SetFilePointer(hFile, 0, NULL, FILE_END) == INVALID_SET_FILE_POINTER) {
     DWORD error = GetLastError();
+    LogError("FileAdd IO failed, for %s, err: %lu", path->data, error);
     CloseHandle(hFile);
     return FILE_ADD_IO_ERROR;
   }
