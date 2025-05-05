@@ -1,7 +1,7 @@
 /* MIT License
 
   base.h - Better cross-platform STD
-  Version - 2025-05-05 (0.1.11):
+  Version - 2025-05-05 (0.1.12):
   https://github.com/TomasBorquez/base.h
 
   Usage:
@@ -962,7 +962,7 @@ String F(Arena *arena, const char *format, ...) {
   size_t size = vsnprintf(NULL, 0, format, args) + 1; // +1 for null terminator
   va_end(args);
 
-  char *buffer = (char *)ArenaAlloc(arena, size);
+  char *buffer = ArenaAllocChars(arena, size);
   va_start(args, format);
   vsnprintf(buffer, size, format, args);
   va_end(args);
@@ -1275,7 +1275,7 @@ errno_t FileRead(Arena *arena, String *path, String *result) {
   }
 
   DWORD bytesRead;
-  char *buffer = (char *)ArenaAlloc(arena, fileSize.QuadPart);
+  char *buffer = ArenaAllocChars(arena, fileSize.QuadPart);
   if (!ReadFile(hFile, buffer, (DWORD)fileSize.QuadPart, &bytesRead, NULL) || bytesRead != fileSize.QuadPart) {
     LogError("Failed to read file: %lu", GetLastError());
     CloseHandle(hFile);
@@ -1489,7 +1489,7 @@ errno_t FileRead(Arena *arena, String *path, String *result) {
   }
 
   off_t fileSize = fileStat.st_size;
-  char *buffer = (char *)ArenaAlloc(arena, fileSize);
+  char *buffer = ArenaAllocChars(arena, fileSize);
   ssize_t bytesRead = read(fd, buffer, fileSize);
   if (bytesRead != fileSize) {
     LogError("Failed to read file: %d", errno);
