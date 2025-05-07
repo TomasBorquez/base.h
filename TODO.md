@@ -15,12 +15,13 @@
 - [x] Add a `StrSplitLine` helper function that works for `\r\n` and for `\n`
 - [x] Add `ListDir` function
 - [x] Create an `.ini` parser
+- [x] Test on `Clang` and `GCC` on linux and windows
+- [ ] Add `TCC` support
+- [ ] Function to reserve some memory `VecCreate()`
 - [ ] Add better error logging, format `$function$: failed $path$ (or whatever params are passed), $error$` specially for file functions
 - [ ] Add some basic tests for each function, and execute them on each PR
 - [ ] `StrSplit` and `StrSplitLine` malloc all strings, remove arena and create `StrVecFree`
-- [ ] Test on `Clang`, `GCC` and `MSVC` on windows
-- [x] Test on `Clang` and `GCC` on linux
-- [ ] Add `TCC` support
+- [ ] Test `MSVC` on windows
 - [ ] Make GNU extensions work in both MSVC and Clang
     - [ ] Vectors
     - [ ] ...

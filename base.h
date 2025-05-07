@@ -1,7 +1,7 @@
 /* MIT License
 
   base.h - Better cross-platform STD
-  Version - 2025-05-07 (0.1.13):
+  Version - 2025-05-07 (0.1.14):
   https://github.com/TomasBorquez/base.h
 
   Usage:
@@ -533,6 +533,7 @@ void IniFree(IniFile *iniFile);
 String IniGet(IniFile *ini, String *key);
 String IniSet(IniFile *ini, String key, String value);
 i32 IniGetInt(IniFile *ini, String *key);
+i64 IniGetLong(IniFile *ini, String *key);
 f64 IniGetDouble(IniFile *ini, String *key);
 bool IniGetBool(IniFile *ini, String *key);
 
@@ -1963,8 +1964,7 @@ String IniGet(IniFile *ini, String *key) {
     }
   }
 
-  String empty = {0};
-  return empty;
+  return (String){0};
 }
 
 String IniSet(IniFile *ini, String key, String value) {
@@ -1986,6 +1986,9 @@ String IniSet(IniFile *ini, String key, String value) {
 
 i32 IniGetInt(IniFile *ini, String *key) {
   String value = IniGet(ini, key);
+  if (StrIsNull(&value)) {
+    return 0;
+  }
 
   char *endPtr;
   i32 result = (i32)strtol(value.data, &endPtr, 10);
@@ -1997,8 +2000,27 @@ i32 IniGetInt(IniFile *ini, String *key) {
   return result;
 }
 
+i64 IniGetLong(IniFile *ini, String *key) {
+  String value = IniGet(ini, key);
+  if (StrIsNull(&value)) {
+    return 0;
+  }
+
+  char *endPtr;
+  i64 result = strtoll(value.data, &endPtr, 10);
+  if (endPtr == value.data) {
+    LogWarn("Failed to convert key: %s, value: %s, to int", key->data, value.data);
+    return 0;
+  }
+
+  return result;
+}
+
 f64 IniGetDouble(IniFile *ini, String *key) {
   String value = IniGet(ini, key);
+  if (StrIsNull(&value)) {
+    return 0.0;
+  }
 
   char *endPtr;
   f64 result = strtod(value.data, &endPtr);
@@ -2012,6 +2034,10 @@ f64 IniGetDouble(IniFile *ini, String *key) {
 
 bool IniGetBool(IniFile *ini, String *key) {
   String value = IniGet(ini, key);
+  if (StrIsNull(&value)) {
+    return false;
+  }
+
   return StrEqual(&value, &S("true"));
 }
 #endif
