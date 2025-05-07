@@ -13,9 +13,11 @@
 - [x] Add equivalent FileSystem implementation for linux
 - [x] Assert `Malloc` and `ArenaAlloc`, use `Malloc` and `Free`
 - [x] Add a `StrSplitLine` helper function that works for `\r\n` and for `\n`
+- [x] Add `ListDir` function
+- [x] Create an `.ini` parser
 - [ ] Add better error logging, format `$function$: failed $path$ (or whatever params are passed), $error$` specially for file functions
-- [ ] Add some basic tests, and execute them on each PR
-- [ ] `StrSplit` malloc all strings, remove arena and create `StrVecFree`
+- [ ] Add some basic tests for each function, and execute them on each PR
+- [ ] `StrSplit` and `StrSplitLine` malloc all strings, remove arena and create `StrVecFree`
 - [ ] Test on `Clang`, `GCC` and `MSVC` on windows
 - [x] Test on `Clang` and `GCC` on linux
 - [ ] Add `TCC` support
