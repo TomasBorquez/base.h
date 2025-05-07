@@ -10,8 +10,6 @@
 
   More on the the `README.md`
 */
-#define BASE_IMPLEMENTATION
-// WARNING: Remove this ^
 #pragma once
 
 #ifdef __cplusplus
@@ -1810,6 +1808,35 @@ FileData *GetDirFiles() {
 
   closedir(dir);
   return data;
+}
+
+StringVector ListDir(Arena *arena, String path) {
+  StringVector result = {0};
+  DIR *dir = opendir(path.data);
+
+  if (dir == NULL) {
+    int error = errno;
+    LogError("Directory listing failed for %s, err: %d", path.data, error);
+    return result;
+  }
+
+  struct dirent *entry;
+  while ((entry = readdir(dir)) != NULL) {
+    if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) {
+      continue;
+    }
+
+    String entryStr = StrNew(arena, entry->d_name);
+    VecPush(result, entryStr);
+  }
+
+  if (errno != 0) {
+    int error = errno;
+    LogError("Error reading directory %s, err: %d", path.data, error);
+  }
+
+  closedir(dir);
+  return result;
 }
 #  endif
 
