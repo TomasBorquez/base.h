@@ -1931,7 +1931,7 @@ IniFile IniParse(String *path) {
     IniEntry entry = {.key = key, .value = value};
     VecPush(result.data, entry);
   }
-  // VecFree(iniSplit);
+  VecFree(iniSplit);
 
   return result;
 }
