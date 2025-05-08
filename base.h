@@ -1897,14 +1897,15 @@ IniFile IniParse(String *path) {
   File stats = {0};
   errno_t err = FileStats(path, &stats);
   if (err != SUCCESS) {
-    LogError("Error on FileStats: %d", err);
-    abort();
+    FileWrite(path, &S("")); // Create empty file if not exist
+    return result;
   }
+
   String buffer;
   result.arena = ArenaCreate(stats.size * 4);
   err = FileRead(result.arena, path, &buffer);
   if (err != SUCCESS) {
-    LogError("Error on FileRead: %d", err);
+    LogError("IniParse: Error on FileRead: %d", err);
     abort();
   }
 
