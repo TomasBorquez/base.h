@@ -1,7 +1,7 @@
 /* MIT License
 
   base.h - Better cross-platform STD
-  Version - 2025-05-08 (0.1.14):
+  Version - 2025-05-08 (0.1.15):
   https://github.com/TomasBorquez/base.h
 
   Usage:
@@ -23,8 +23,10 @@ extern "C" {
 #  define COMPILER_MSVC
 #elif defined(__GNUC__)
 #  define COMPILER_GCC
+#elif defined(__TINYC__)
+#  define COMPILER_TCC
 #else
-#  error "The codebase only supports Clang, MSVC and GCC. TCC soon"
+#  error "The codebase only supports GCC, Clang, TCC and MSVC"
 #endif
 
 #ifdef __GNUC__
@@ -43,8 +45,10 @@ extern "C" {
 #  define PLATFORM_WIN
 #elif defined(__linux__) || defined(__gnu_linux__)
 #  define PLATFORM_LINUX
+#elif defined(__APPLE__) || defined(__MACH__)
+#  define PLATFORM_MACOS
 #else
-#  error "The codebase only supports windows and linux, macos soon"
+#  error "The codebase only supports linux, macos and windows"
 #endif
 
 #if defined(COMPILER_CLANG)
@@ -56,7 +60,7 @@ extern "C" {
 #if defined(PLATFORM_WIN)
 #  define WIN32_LEAN_AND_MEAN
 #  include <windows.h>
-#elif defined(PLATFORM_LINUX)
+#else
 #  define _POSIX_C_SOURCE 200809L
 #  define _GNU_SOURCE
 #  include <dirent.h>
@@ -80,7 +84,7 @@ extern "C" {
 #    define C_STANDARD_C99
 #    define C_STANDARD "C99"
 #  else
-#    error "you are cooked" // ???
+#    error "Why C89 if you have C99"
 #  endif
 #endif
 
@@ -95,7 +99,7 @@ extern "C" {
 #    define C_STANDARD_C11
 #    define C_STANDARD "C11"
 #  else
-#    error "you are cooked" // ???
+#    error "How did you even get here?? Send an issue on github/TomasBorquez/mate.h"
 #  endif
 #endif
 
@@ -608,6 +612,8 @@ String GetCompiler() {
   return S("clang");
 #  elif defined(COMPILER_GCC)
   return S("gcc");
+#  elif defined(COMPILER_TCC)
+  return S("tcc");
 #  elif defined(COMPILER_MSVC)
   return S("MSVC");
 #  endif
@@ -618,6 +624,8 @@ String GetPlatform() {
   return S("windows");
 #  elif defined(PLATFORM_LINUX)
   return S("linux");
+#  elif defined(PLATFORM_MACOS)
+  return S("macos");
 #  endif
 }
 
@@ -1492,7 +1500,7 @@ StringVector ListDir(Arena *arena, String path) {
   FindClose(hFind);
   return result;
 }
-#  elif defined(PLATFORM_LINUX)
+#  else
 char *GetCwd() {
   static _Thread_local char currentPath[PATH_MAX];
   if (getcwd(currentPath, PATH_MAX) == NULL) {
