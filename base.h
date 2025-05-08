@@ -1127,7 +1127,7 @@ f32 RandomFloat(f32 min, f32 max) {
 /* File System Implementation */
 #  if defined(PLATFORM_WIN)
 char *GetCwd() {
-  static _Thread_local char currentPath[MAX_PATH];
+  static char currentPath[MAX_PATH];
   DWORD length = GetCurrentDirectory(MAX_PATH, currentPath);
   if (length == 0) {
     LogError("Error getting current directory: %lu", GetLastError());
@@ -1502,7 +1502,7 @@ StringVector ListDir(Arena *arena, String path) {
 }
 #  else
 char *GetCwd() {
-  static _Thread_local char currentPath[PATH_MAX];
+  static char currentPath[PATH_MAX];
   if (getcwd(currentPath, PATH_MAX) == NULL) {
     LogError("Error getting current directory: %s", strerror(errno));
     currentPath[0] = '\0';
