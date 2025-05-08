@@ -16,14 +16,16 @@
 - [x] Add `ListDir` function
 - [x] Create an `.ini` parser
 - [x] Test on `Clang` and `GCC` on linux and windows
-- [ ] Add `TCC` support
+- [x] Add `TCC` support
+- [ ] Tests 
+    - [ ] Add some basic tests for each function, 
+    - [ ] Execute them on each PR
 - [ ] Function to reserve some memory `VecCreate()`
-- [ ] Add better error logging, format `$function$: failed $path$ (or whatever params are passed), $error$` specially for file functions
-- [ ] Add some basic tests for each function, and execute them on each PR
 - [ ] `StrSplit` and `StrSplitLine` malloc all strings, remove arena and create `StrVecFree`
 - [ ] Test `MSVC` on windows
-- [ ] Make GNU extensions work in both MSVC and Clang
+- [ ] Remove GNU extensions, so it works in both in MSVC and GCC
     - [ ] Vectors
+    - [ ] Swap
     - [ ] ...
 - [ ] Static `MAX_PATH` is fragile:
     - [ ] https://eklitzke.org/path-max-is-tricky (GNU extension `char *get_current_dir_name()` dynamic length)
