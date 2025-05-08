@@ -123,7 +123,7 @@ static void TestIniParser() {
     TEST_ASSERT(iniFile.data.length == 8, "IniFile size increased after add");
 
     String newIniPath = S("new_config.ini");
-    bool createResult = IniCreate(&newIniPath, &iniFile);
+    bool createResult = IniWrite(&newIniPath, &iniFile);
     TEST_ASSERT(createResult == true, "IniCreate success");
 
     IniFile newIniFile = IniParse(&newIniPath);

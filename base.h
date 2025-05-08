@@ -1,7 +1,7 @@
 /* MIT License
 
   base.h - Better cross-platform STD
-  Version - 2025-05-07 (0.1.14):
+  Version - 2025-05-08 (0.1.14):
   https://github.com/TomasBorquez/base.h
 
   Usage:
@@ -527,7 +527,7 @@ typedef struct {
 } IniFile;
 
 IniFile IniParse(String *path);
-bool IniCreate(String *path, IniFile *iniFile); // NOTE: Updates/Creates .ini file
+bool IniWrite(String *path, IniFile *iniFile); // NOTE: Updates/Creates .ini file
 void IniFree(IniFile *iniFile);
 
 String IniGet(IniFile *ini, String *key);
@@ -1247,7 +1247,6 @@ errno_t FileStats(String *path, File *result) {
   WIN32_FILE_ATTRIBUTE_DATA fileAttr = {0};
 
   if (!GetFileAttributesExA(path->data, GetFileExInfoStandard, &fileAttr)) {
-    LogError("Failed to get file attributes: %lu", GetLastError());
     return FILE_GET_ATTRIBUTES_FAILED;
   }
 
@@ -1514,7 +1513,6 @@ errno_t FileStats(String *path, File *result) {
   struct stat fileStat;
 
   if (stat(path->data, &fileStat) != 0) {
-    LogError("Failed to get file attributes: %d", errno);
     return FILE_GET_ATTRIBUTES_FAILED;
   }
 
@@ -1897,7 +1895,9 @@ IniFile IniParse(String *path) {
   File stats = {0};
   errno_t err = FileStats(path, &stats);
   if (err != SUCCESS) {
-    FileWrite(path, &S("")); // Create empty file if not exist
+    LogWarn("%s does not exist, creating...", path->data);
+    FileWrite(path, &S(""));                         // Create empty file if not exist
+    result.arena = ArenaCreate(sizeof(String) * 10); // Initialize arena to 10 strings at least
     return result;
   }
 
@@ -1935,8 +1935,8 @@ IniFile IniParse(String *path) {
     IniEntry entry = {.key = key, .value = value};
     VecPush(result.data, entry);
   }
-  VecFree(iniSplit);
 
+  VecFree(iniSplit);
   return result;
 }
 
@@ -1945,7 +1945,7 @@ void IniFree(IniFile *iniFile) {
   VecFree(iniFile->data);
 }
 
-bool IniCreate(String *path, IniFile *iniFile) {
+bool IniWrite(String *path, IniFile *iniFile) {
   FileWrite(path, &S("")); // Reset/Create file
 
   for (size_t i = 0; i < iniFile->data.length; i++) {
