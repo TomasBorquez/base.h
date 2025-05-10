@@ -17,18 +17,18 @@
 - [x] Create an `.ini` parser
 - [x] Test on `Clang` and `GCC` on linux and windows
 - [x] Add `TCC` support
-- [ ] Tests 
-    - [ ] Add some basic tests for each function, 
-    - [ ] Execute them on each PR
-- [ ] Function to reserve some memory `VecCreate()`
-- [ ] `StrSplit` and `StrSplitLine` malloc all strings, remove arena and create `StrVecFree`
-- [ ] Test `MSVC` on windows
-- [ ] Remove GNU extensions, so it works in both in MSVC and GCC
+- [x] Add `StrBuilder`
+- [x] Function to reserve some memory `VecCreate()`
+- [x] Add better error logging, format `$function$: failed $path$ (or whatever params are passed), $error$` specially for file functions
+- [ ] Add some basic tests for each function, and execute them on each PR
+
+- [ ] Make GNU extensions work in both MSVC and Clang
     - [ ] Vectors
-    - [ ] Swap
     - [ ] ...
 - [ ] Static `MAX_PATH` is fragile:
     - [ ] https://eklitzke.org/path-max-is-tricky (GNU extension `char *get_current_dir_name()` dynamic length)
     - [ ] `wide paths` UTF16 on windows
 - [ ] `System()` to run commands is fragile 
     - [ ] Depends on the OS shell syntax which is not portable. It should use platform primitives such as CreateProcess on windows and fork+exec (or posix_spawn) on unix.
+- [ ] Test `MSVC` on windows
+- [ ] Add `StrIncludes`, `StrIncludesStart`, `StrIncludesEnd`
