@@ -24,15 +24,16 @@ jobs:
       uses: actions/cache@v3
       id: apt-cache
       with:
-        path: /var/cache/apt/archives/*.deb
+        path: ~/.apt-cache
         key: ${{ runner.os }}-apt-${{ hashFiles('**/apt-packages.txt') || github.run_id }}
         restore-keys: |
           ${{ runner.os }}-apt-
     
     - name: Install compilers
       run: |
+        mkdir -p ~/.apt-cache
         sudo apt-get update
-        sudo apt-get install -y gcc clang tcc
+        sudo apt-get -o dir::cache::archives="~/.apt-cache" install -y gcc clang tcc
 
     - name: Test arena tests
       working-directory: ./tests
