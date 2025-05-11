@@ -3,29 +3,28 @@
 void TestFileOperations() {
   TEST_BEGIN("FileOperations");
   {
-    bool mkdirResult = Mkdir(S("file-system-tests"));
+    bool mkdirResult = Mkdir(S("file-system-dir"));
     TEST_ASSERT(mkdirResult == true, "Should create test directory");
+    SetCwd("file-system-dir");
 
-    SetCwd("file-system-tests");
-
-    bool dirResult = Mkdir(S("test_dir"));
+    bool dirResult = Mkdir(S("test-dir"));
     TEST_ASSERT(dirResult == true, "Should create directory");
 
     Arena *arena = ArenaCreate(1024);
     StringVector files = ListDir(arena, S("."));
-    TEST_ASSERT(files.length > 0, "Should list at least one entry (test_dir)");
+    TEST_ASSERT(files.length > 0, "Should list at least one entry (test-dir)");
 
     String content = S("Test content");
-    errno_t writeResult = FileWrite(S("test_file.txt"), content);
+    errno_t writeResult = FileWrite(S("test-file.txt"), content);
     TEST_ASSERT(writeResult == SUCCESS, "Should write file successfully");
 
     File fileStats;
-    errno_t statsResult = FileStats(S("test_file.txt"), &fileStats);
+    errno_t statsResult = FileStats(S("test-file.txt"), &fileStats);
     TEST_ASSERT(statsResult == SUCCESS, "Should get file stats");
     TEST_ASSERT(fileStats.size == (i64)content.length, "File size should match written content size");
 
     String readContent;
-    errno_t readResult = FileRead(arena, S("test_file.txt"), &readContent);
+    errno_t readResult = FileRead(arena, S("test-file.txt"), &readContent);
     TEST_ASSERT(readResult == SUCCESS, "Should read file successfully");
     TEST_ASSERT(readContent.length == content.length, "Read content size should match written content size");
 
@@ -39,38 +38,38 @@ void TestFileOperations() {
     TEST_ASSERT(contentMatch, "Read content should match written content");
 
     String additional = S("Additional content");
-    errno_t addResult = FileAdd(S("test_file.txt"), additional);
+    errno_t addResult = FileAdd(S("test-file.txt"), additional);
     TEST_ASSERT(addResult == SUCCESS, "Should add content to file");
 
     String updatedContent;
-    errno_t updatedReadResult = FileRead(arena, S("test_file.txt"), &updatedContent);
+    errno_t updatedReadResult = FileRead(arena, S("test-file.txt"), &updatedContent);
     TEST_ASSERT(updatedReadResult == SUCCESS, "Should read updated file");
     TEST_ASSERT(updatedContent.length > content.length, "Updated content should be larger");
 
-    errno_t resetResult = FileReset(S("test_file.txt"));
+    errno_t resetResult = FileReset(S("test-file.txt"));
     TEST_ASSERT(resetResult == SUCCESS, "Should reset file");
 
     String resetContent;
-    errno_t resetReadResult = FileRead(arena, S("test_file.txt"), &resetContent);
+    errno_t resetReadResult = FileRead(arena, S("test-file.txt"), &resetContent);
     TEST_ASSERT(resetReadResult == SUCCESS, "Should read reset file");
     TEST_ASSERT(resetContent.length == 0, "Reset content should be empty");
 
-    errno_t renameResult = FileRename(S("test_file.txt"), S("renamed_file.txt"));
+    errno_t renameResult = FileRename(S("test-file.txt"), S("renamed-file.txt"));
     TEST_ASSERT(renameResult == SUCCESS, "Should rename file");
 
     File originalStats;
-    errno_t originalStatsResult = FileStats(S("test_file.txt"), &originalStats);
+    errno_t originalStatsResult = FileStats(S("test-file.txt"), &originalStats);
     TEST_ASSERT(originalStatsResult == FILE_STATS_FILE_NOT_EXIST, "Original file should not exist after rename");
 
     File renamedStats;
-    errno_t renamedStatsResult = FileStats(S("renamed_file.txt"), &renamedStats);
+    errno_t renamedStatsResult = FileStats(S("renamed-file.txt"), &renamedStats);
     TEST_ASSERT(renamedStatsResult == SUCCESS, "Renamed file should exist");
 
-    errno_t deleteResult = FileDelete(S("renamed_file.txt"));
+    errno_t deleteResult = FileDelete(S("renamed-file.txt"));
     TEST_ASSERT(deleteResult == SUCCESS, "Should delete file");
 
     File deletedStats;
-    errno_t deletedStatsResult = FileStats(S("renamed_file.txt"), &deletedStats);
+    errno_t deletedStatsResult = FileStats(S("renamed-file.txt"), &deletedStats);
     TEST_ASSERT(deletedStatsResult == FILE_STATS_FILE_NOT_EXIST, "File should not exist after deletion");
 
     ArenaFree(arena);
@@ -84,17 +83,17 @@ void TestFileErrorCases() {
     Arena *arena = ArenaCreate(1024);
 
     String content;
-    errno_t readResult = FileRead(arena, S("non_existent.txt"), &content);
+    errno_t readResult = FileRead(arena, S("non-existent.txt"), &content);
     TEST_ASSERT(readResult == FILE_NOT_EXIST, "Should return FILE_NOT_EXIST for non-existent file");
 
     File fileStats;
-    errno_t statsResult = FileStats(S("non_existent.txt"), &fileStats);
+    errno_t statsResult = FileStats(S("non-existent.txt"), &fileStats);
     TEST_ASSERT(statsResult == FILE_STATS_FILE_NOT_EXIST, "Should return FILE_STATS_FILE_NOT_EXIST for non-existent file");
 
-    errno_t deleteResult = FileDelete(S("non_existent.txt"));
+    errno_t deleteResult = FileDelete(S("non-existent.txt"));
     TEST_ASSERT(deleteResult == FILE_DELETE_NOT_FOUND, "Should return FILE_DELETE_NOT_FOUND for non-existent file");
 
-    errno_t renameResult = FileRename(S("non_existent.txt"), S("new_name.txt"));
+    errno_t renameResult = FileRename(S("non-existent.txt"), S("new-name.txt"));
     TEST_ASSERT(renameResult == FILE_RENAME_NOT_FOUND, "Should return FILE_RENAME_NOT_FOUND for non-existent file");
 
     errno_t writeExist = FileWrite(S("existing.txt"), S("Existing content"));
@@ -133,14 +132,14 @@ void TestDirectoryOperations() {
     StringVector nestedFiles = ListDir(arena, S("nested"));
     TEST_ASSERT(nestedFiles.length > 0, "Should list nested directory contents");
 
-    errno_t writeResult = FileWrite(S("nested/test_file.txt"), S("Nested file content"));
+    errno_t writeResult = FileWrite(S("nested/test-file.txt"), S("Nested file content"));
     TEST_ASSERT(writeResult == SUCCESS, "Should write file in nested directory");
 
     String readContent;
-    errno_t readResult = FileRead(arena, S("nested/test_file.txt"), &readContent);
+    errno_t readResult = FileRead(arena, S("nested/test-file.txt"), &readContent);
     TEST_ASSERT(readResult == SUCCESS, "Should read file from nested directory");
 
-    errno_t deleteResult = FileDelete(S("nested/test_file.txt"));
+    errno_t deleteResult = FileDelete(S("nested/test-file.txt"));
     TEST_ASSERT(deleteResult == SUCCESS, "Should delete file in nested directory");
 
     ArenaFree(arena);
@@ -151,7 +150,7 @@ void TestDirectoryOperations() {
 void TestPathHandling() {
   TEST_BEGIN("PathHandling");
   {
-    errno_t writeResult = FileWrite(S("./relative_path.txt"), S("Relative path content"));
+    errno_t writeResult = FileWrite(S("./relative-path.txt"), S("Relative path content"));
     TEST_ASSERT(writeResult == SUCCESS, "Should handle relative paths with dot");
 
     bool mkdirBackslash = Mkdir(S("backslash"));
@@ -163,7 +162,7 @@ void TestPathHandling() {
     errno_t writeEmpty = FileWrite(S(""), S("Empty path content"));
     TEST_ASSERT(writeEmpty != SUCCESS, "Should handle empty path gracefully");
 
-    errno_t deleteRelative = FileDelete(S("./relative_path.txt"));
+    errno_t deleteRelative = FileDelete(S("./relative-path.txt"));
     TEST_ASSERT(deleteRelative == SUCCESS, "Should delete file with relative path");
 
     errno_t deleteBackslash = FileDelete(S("backslash/path.txt"));
@@ -175,12 +174,12 @@ void TestPathHandling() {
 void TestFileSystemEdgeCases() {
   TEST_BEGIN("FileSystemEdgeCases");
   {
-    errno_t writeEmpty = FileWrite(S("empty_file.txt"), S(""));
+    errno_t writeEmpty = FileWrite(S("empty-file.txt"), S(""));
     TEST_ASSERT(writeEmpty == SUCCESS, "Should write empty file");
 
     Arena *arena = ArenaCreate(1024);
     String content;
-    errno_t readEmpty = FileRead(arena, S("empty_file.txt"), &content);
+    errno_t readEmpty = FileRead(arena, S("empty-file.txt"), &content);
     TEST_ASSERT(readEmpty == SUCCESS, "Should read empty file");
     TEST_ASSERT(content.length == 0, "Should read empty content");
 
@@ -190,20 +189,20 @@ void TestFileSystemEdgeCases() {
       memset(largeBuffer, 'A', largeSize);
       String largeContent = {.length = largeSize, .data = largeBuffer};
 
-      errno_t writeLarge = FileWrite(S("large_file.txt"), largeContent);
+      errno_t writeLarge = FileWrite(S("large-file.txt"), largeContent);
       TEST_ASSERT(writeLarge == SUCCESS, "Should write large file");
 
       File largeStats;
-      errno_t largeStatsResult = FileStats(S("large_file.txt"), &largeStats);
+      errno_t largeStatsResult = FileStats(S("large-file.txt"), &largeStats);
       TEST_ASSERT(largeStatsResult == SUCCESS, "Should get large file stats");
       TEST_ASSERT(largeStats.size == (i64)largeSize, "Large file size should match");
 
-      errno_t deleteLarge = FileDelete(S("large_file.txt"));
+      errno_t deleteLarge = FileDelete(S("large-file.txt"));
       TEST_ASSERT(deleteLarge == SUCCESS, "Should delete large file");
       Free(largeBuffer);
     }
 
-    errno_t deleteEmpty = FileDelete(S("empty_file.txt"));
+    errno_t deleteEmpty = FileDelete(S("empty-file.txt"));
     TEST_ASSERT(deleteEmpty == SUCCESS, "Should delete empty file");
 
     ArenaFree(arena);
@@ -221,5 +220,4 @@ i32 main() {
     TestFileSystemEdgeCases();
   }
   EndTest();
-  return 0;
 }

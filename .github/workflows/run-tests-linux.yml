@@ -48,13 +48,13 @@ jobs:
     - name: Test ini parser tests
       working-directory: ./tests
       run: |
-        ${{ matrix.compiler }} ini-parser-tests.c -o ini-parser-tests
+        ${{ matrix.compiler }} ini-parser-tests.c -o ini-parser-tests -lm
         ./ini-parser-tests
         if [ $? -ne 0 ]; then
           echo "ini-parser-tests failed with ${{ matrix.compiler }}"
           exit 1
         fi
-    
+
     - name: Test string tests
       working-directory: ./tests
       run: |
