@@ -20,7 +20,17 @@ jobs:
         fetch-depth: 0  
         token: ${{ secrets.GITHUB_TOKEN }}
     
+    - name: Cache apt packages
+      uses: actions/cache@v3
+      id: apt-cache
+      with:
+        path: /var/cache/apt/archives
+        key: ${{ runner.os }}-apt-${{ hashFiles('**/apt-packages.txt') || github.run_id }}
+        restore-keys: |
+          ${{ runner.os }}-apt-
+    
     - name: Install compilers
+      if: steps.apt-cache.outputs.cache-hit != 'true'
       run: |
         sudo apt-get update
         sudo apt-get install -y gcc clang tcc
