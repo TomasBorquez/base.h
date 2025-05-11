@@ -1,0 +1,76 @@
+name: Run Tests Linux
+on:
+  push:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  test-modules:
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        compiler: [gcc, clang, tcc]
+    
+    steps:
+    - name: Checkout code with submodules
+      uses: actions/checkout@v3
+      with:
+        submodules: recursive
+        fetch-depth: 0  
+        token: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: Install compilers
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y gcc clang tcc
+
+    - name: Test arena tests
+      working-directory: ./tests
+      run: |
+        ${{ matrix.compiler }} arena-tests.c -o arena-tests
+        ./arena-tests
+        if [ $? -ne 0 ]; then
+          echo "arena-tests failed with ${{ matrix.compiler }}"
+          exit 1
+        fi
+    
+    - name: Test file system tests
+      working-directory: ./tests
+      run: |
+        ${{ matrix.compiler }} file-system-tests.c -o file-system-tests
+        ./file-system-tests
+        if [ $? -ne 0 ]; then
+          echo "file-system-tests failed with ${{ matrix.compiler }}"
+          exit 1
+        fi
+    
+    - name: Test ini parser tests
+      working-directory: ./tests
+      run: |
+        ${{ matrix.compiler }} ini-parser-tests.c -o ini-parser-tests
+        ./ini-parser-tests
+        if [ $? -ne 0 ]; then
+          echo "ini-parser-tests failed with ${{ matrix.compiler }}"
+          exit 1
+        fi
+    
+    - name: Test string tests
+      working-directory: ./tests
+      run: |
+        ${{ matrix.compiler }} string-tests.c -o string-tests
+        ./string-tests
+        if [ $? -ne 0 ]; then
+          echo "string-tests failed with ${{ matrix.compiler }}"
+          exit 1
+        fi
+    
+    - name: Test vector tests
+      working-directory: ./tests
+      run: |
+        ${{ matrix.compiler }} vector-tests.c -o vector-tests
+        ./vector-tests
+        if [ $? -ne 0 ]; then
+          echo "vector-tests failed with ${{ matrix.compiler }}"
+          exit 1
+        fi

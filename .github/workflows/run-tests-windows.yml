@@ -1,0 +1,84 @@
+name: Run Tests Windows
+on:
+  push:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  test-modules:
+    runs-on: windows-latest
+    
+    strategy:
+      matrix:
+        compiler: [gcc, clang]
+    
+    defaults:
+      run:
+        shell: msys2 {0}
+    
+    steps:
+    - name: Checkout code with submodules
+      uses: actions/checkout@v3
+      with:
+        submodules: recursive
+        fetch-depth: 0  
+        token: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: Setup MSYS2
+      uses: msys2/setup-msys2@v2
+      with:
+        msystem: MINGW64
+        update: true
+        install: >-
+          mingw-w64-x86_64-gcc
+          mingw-w64-x86_64-clang
+    
+    - name: Test arena tests
+      working-directory: ./tests
+      run: |
+        ${{ matrix.compiler }} arena-tests.c -o arena-tests.exe
+        ./arena-tests.exe
+        if [ $? -ne 0 ]; then
+          echo "arena-tests failed with ${{ matrix.compiler }}"
+          exit 1
+        fi
+    
+    - name: Test file system tests
+      working-directory: ./tests
+      run: |
+        ${{ matrix.compiler }} file-system-tests.c -o file-system-tests.exe
+        ./file-system-tests.exe
+        if [ $? -ne 0 ]; then
+          echo "file-system-tests failed with ${{ matrix.compiler }}"
+          exit 1
+        fi
+    
+    - name: Test ini parser tests
+      working-directory: ./tests
+      run: |
+        ${{ matrix.compiler }} ini-parser-tests.c -o ini-parser-tests.exe
+        ./ini-parser-tests.exe
+        if [ $? -ne 0 ]; then
+          echo "ini-parser-tests failed with ${{ matrix.compiler }}"
+          exit 1
+        fi
+    
+    - name: Test string tests
+      working-directory: ./tests
+      run: |
+        ${{ matrix.compiler }} string-tests.c -o string-tests.exe
+        ./string-tests.exe
+        if [ $? -ne 0 ]; then
+          echo "string-tests failed with ${{ matrix.compiler }}"
+          exit 1
+        fi
+    
+    - name: Test vector tests
+      working-directory: ./tests
+      run: |
+        ${{ matrix.compiler }} vector-tests.c -o vector-tests.exe
+        ./vector-tests.exe
+        if [ $? -ne 0 ]; then
+          echo "vector-tests failed with ${{ matrix.compiler }}"
+          exit 1
+        fi

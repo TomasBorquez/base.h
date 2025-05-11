@@ -1,83 +1,27 @@
 #include <math.h>
 
-#define BASE_IMPLEMENTATION
-#include "../base.h"
+#include "test.c"
 
-static int totalTestsRun = 0;
-static int totalTestsFailed = 0;
-
-#define TEST_BEGIN(name) \
-  int testsRun = 0;      \
-  int testsFailed = 0;   \
-  LogInfo("TESTING: %s", name);
-
-#define TEST_END(name)       \
-  totalTestsRun += testsRun; \
-  totalTestsFailed += testsFailed;
-
-#define TEST_ASSERT(cond, msg)         \
-  testsRun++;                          \
-  if (!(cond)) {                       \
-    testsFailed++;                     \
-    LogError("assert failed %s", msg); \
-  }
-
-static void TestVectors() {
-  TEST_BEGIN("StringVector");
+static void TestIniParseBasic() {
+  TEST_BEGIN("Ini Parse Basic");
   {
-    StringVector vec = {0};
-    VecForEach(vec, str) {
-      TEST_ASSERT(false, "Empty vector iteration");
-    }
-    TEST_ASSERT(true, "Empty vector does not iterate");
-
-    VecPush(vec, S("1"));
-    VecPush(vec, S("2"));
-    VecPush(vec, S("3"));
-    TEST_ASSERT(vec.length == 3, "Vector has 3 elements");
-
-    int count = 0;
-    VecForEach(vec, str) {
-      count++;
-    }
-    TEST_ASSERT(count == 3, "Vector iteration count matches length");
-
-    VecFree(vec);
-    TEST_ASSERT(true, "Vector freed");
-  }
-  TEST_END("StringVector");
-}
-
-static void TestArenas() {
-  TEST_BEGIN("Arenas");
-  {
-    Arena *a = ArenaCreate(1024);
-    TEST_ASSERT(a != NULL, "Arena created");
-
-    uintptr_t ptr1 = (uintptr_t)ArenaAlloc(a, 1);
-    uintptr_t ptr2 = (uintptr_t)ArenaAlloc(a, 1);
-    TEST_ASSERT(ptr2 - ptr1 == DEFAULT_ALIGNMENT, "Arena alignment");
-
-    uintptr_t ptr3 = (uintptr_t)ArenaAllocChars(a, 2);
-    TEST_ASSERT(ptr3 - ptr2 == 1, "Arena char alignment");
-
-    void *largePtr = ArenaAllocChars(a, 4000);
-    TEST_ASSERT(largePtr != NULL, "Large allocation successful");
-
-    ArenaFree(a);
-    TEST_ASSERT(true, "Arena freed");
-  }
-  TEST_END("Arenas");
-}
-
-static void TestIniParser() {
-  TEST_BEGIN("IniParser");
-  {
-    String testPath = S("test-config.ini");
+    String testPath = S("./resources/test-config.ini");
     IniFile iniFile = {0};
     errno_t err = IniParse(testPath, &iniFile);
     TEST_ASSERT(err == SUCCESS, "IniParse failed");
     TEST_ASSERT(iniFile.data.length == 7, "IniParse found 7 key-value pairs");
+    IniFree(&iniFile);
+  }
+  TEST_END();
+}
+
+static void TestIniGetString() {
+  TEST_BEGIN("Ini Get String Values");
+  {
+    String testPath = S("./resources/test-config.ini");
+    IniFile iniFile = {0};
+    errno_t err = IniParse(testPath, &iniFile);
+    TEST_ASSERT(err == SUCCESS, "IniParse failed");
 
     String key1 = S("key1");
     String value1 = IniGet(&iniFile, key1);
@@ -90,6 +34,19 @@ static void TestIniParser() {
     String keyWithSpaces = S("key with spaces");
     String valueWithSpaces = IniGet(&iniFile, keyWithSpaces);
     TEST_ASSERT(StrEq(valueWithSpaces, S("value with spaces")), "IniGet with spaces");
+
+    IniFree(&iniFile);
+  }
+  TEST_END();
+}
+
+static void TestIniGetTypedValues() {
+  TEST_BEGIN("Ini Get Typed Values");
+  {
+    String testPath = S("./resources/test-config.ini");
+    IniFile iniFile = {0};
+    errno_t err = IniParse(testPath, &iniFile);
+    TEST_ASSERT(err == SUCCESS, "IniParse failed");
 
     String key3 = S("key3");
     i32 intValue = IniGetInt(&iniFile, key3);
@@ -105,10 +62,37 @@ static void TestIniParser() {
     bool boolValue2 = IniGetBool(&iniFile, S("key6"));
     TEST_ASSERT(boolValue2 == false, "IniGetBool false");
 
+    IniFree(&iniFile);
+  }
+  TEST_END();
+}
+
+static void TestIniNonExistentKey() {
+  TEST_BEGIN("Ini Non-Existent Key");
+  {
+    String testPath = S("./resources/test-config.ini");
+    IniFile iniFile = {0};
+    errno_t err = IniParse(testPath, &iniFile);
+    TEST_ASSERT(err == SUCCESS, "IniParse failed");
+
     String nonExistentKey = S("non_existent_key");
     String emptyValue = IniGet(&iniFile, nonExistentKey);
     TEST_ASSERT(emptyValue.length == 0 && emptyValue.data == NULL, "IniGet non-existent key");
 
+    IniFree(&iniFile);
+  }
+  TEST_END();
+}
+
+static void TestIniSetValues() {
+  TEST_BEGIN("Ini Set Values");
+  {
+    String testPath = S("./resources/test-config.ini");
+    IniFile iniFile = {0};
+    errno_t err = IniParse(testPath, &iniFile);
+    TEST_ASSERT(err == SUCCESS, "IniParse failed");
+
+    String key1 = S("key1");
     String updatedValue = IniSet(&iniFile, key1, S("new_value1"));
     TEST_ASSERT(StrEq(updatedValue, S("new_value1")), "IniSet update");
 
@@ -124,7 +108,27 @@ static void TestIniParser() {
     TEST_ASSERT(StrEq(retrievedNewValue, newValue), "IniGet after add");
     TEST_ASSERT(iniFile.data.length == 8, "IniFile size increased after add");
 
-    String newIniPath = S("new_config.ini");
+    IniFree(&iniFile);
+  }
+  TEST_END();
+}
+
+static void TestIniWriteAndRead() {
+  TEST_BEGIN("Ini Write and Read");
+  {
+    String testPath = S("./resources/test-config.ini");
+    IniFile iniFile = {0};
+    errno_t err = IniParse(testPath, &iniFile);
+    TEST_ASSERT(err == SUCCESS, "IniParse failed");
+
+    String key1 = S("key1");
+    IniSet(&iniFile, key1, S("new_value1"));
+
+    String newKey = S("new_key");
+    String newValue = S("new_value");
+    IniSet(&iniFile, newKey, newValue);
+
+    String newIniPath = S("./resources/new_config.ini");
     errno_t createResult = IniWrite(newIniPath, &iniFile);
     TEST_ASSERT(createResult == SUCCESS, "IniWrite success");
 
@@ -139,48 +143,50 @@ static void TestIniParser() {
     String newKeyValueFromNewFile = IniGet(&newIniFile, newKey);
     TEST_ASSERT(StrEq(newKeyValueFromNewFile, newValue), "IniGet new key from new file");
 
-    String emptyFilePath = S("empty.ini");
+    IniFree(&iniFile);
+    IniFree(&newIniFile);
+  }
+  TEST_END();
+}
+
+static void TestIniSpecialCases() {
+  TEST_BEGIN("Ini Special Cases");
+  {
+    String emptyFilePath = S("./resources/empty.ini");
     IniFile emptyIni = {0};
-    err = IniParse(emptyFilePath, &emptyIni);
+    errno_t err = IniParse(emptyFilePath, &emptyIni);
     TEST_ASSERT(err == SUCCESS, "IniParse failed");
     TEST_ASSERT(emptyIni.data.length == 0, "Empty INI file");
 
-    String commentsFilePath = S("comments.ini");
+    String commentsFilePath = S("./resources/comments.ini");
     IniFile commentsIni = {0};
     err = IniParse(commentsFilePath, &commentsIni);
     TEST_ASSERT(err == SUCCESS, "IniParse failed");
     TEST_ASSERT(commentsIni.data.length == 0, "Comments-only INI file");
 
-    String malformedFilePath = S("malformed.ini");
+    String malformedFilePath = S("./resources/malformed.ini");
     IniFile malformedIni = {0};
     err = IniParse(malformedFilePath, &malformedIni);
     TEST_ASSERT(err == SUCCESS, "IniParse failed");
     TEST_ASSERT(malformedIni.data.length == 2, "Malformed INI file");
 
-    IniFree(&iniFile);
-    IniFree(&newIniFile);
     IniFree(&emptyIni);
     IniFree(&commentsIni);
     IniFree(&malformedIni);
-    TEST_ASSERT(true, "All INI files freed");
   }
-  TEST_END("IniParser");
+  TEST_END();
 }
 
-int main() {
-  LogInfo("========== Running tests ==========");
-
-  TestVectors();
-  TestArenas();
-  TestIniParser();
-
-  LogInfo("========== Tests complete ==========");
-  LogInfo("Total tests run: %d", totalTestsRun);
-  if (totalTestsFailed > 1) {
-    LogError("%d tests failed!", totalTestsFailed);
-    return 1;
+i32 main() {
+  StartTest();
+  {
+    TestIniParseBasic();
+    TestIniGetString();
+    TestIniGetTypedValues();
+    TestIniNonExistentKey();
+    TestIniSetValues();
+    TestIniWriteAndRead();
+    TestIniSpecialCases();
   }
-
-  LogSuccess("All tests passed!");
-  return 0;
+  EndTest();
 }
