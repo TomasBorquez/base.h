@@ -11,7 +11,9 @@ jobs:
     strategy:
       matrix:
         compiler: [gcc, clang, tcc]
-    
+        include:
+          - compiler: tcc
+            install: true
     steps:
     - name: Checkout code with submodules
       uses: actions/checkout@v3
@@ -20,20 +22,11 @@ jobs:
         fetch-depth: 0  
         token: ${{ secrets.GITHUB_TOKEN }}
     
-    - name: Cache apt packages
-      uses: actions/cache@v3
-      id: apt-cache
-      with:
-        path: ~/.apt-cache
-        key: ${{ runner.os }}-apt-${{ hashFiles('**/apt-packages.txt') || github.run_id }}
-        restore-keys: |
-          ${{ runner.os }}-apt-
-    
-    - name: Install compilers
+    - name: Install tcc
+      if: matrix.install
       run: |
-        mkdir -p ~/.apt-cache
         sudo apt-get update
-        sudo apt-get -o dir::cache::archives="~/.apt-cache" install -y gcc clang tcc
+        sudo apt-get install -y tcc
 
     - name: Test arena tests
       working-directory: ./tests
