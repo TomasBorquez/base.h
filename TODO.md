@@ -20,7 +20,7 @@
 - [x] Add `StrBuilder`
 - [x] Function to reserve some memory `VecCreate()`
 - [x] Add better error logging, format `$function$: failed $path$ (or whatever params are passed), $error$` specially for file functions
-- [ ] Add some basic tests for each function, and execute them on each PR
+- [x] Add some basic tests for each function, and execute them on each PR
 
 - [ ] Make GNU extensions work in both MSVC and Clang
     - [ ] Vectors
