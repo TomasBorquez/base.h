@@ -317,13 +317,14 @@ String s(char *msg);
 String F(Arena *arena, const char *format, ...) FORMAT_CHECK(2, 3);
 
 VEC_TYPE(StringVector, String);
-#define StringVectorPushMany(vector, ...)              \
-  do {                                                 \
-    char *values[] = {__VA_ARGS__};                    \
-    size_t count = sizeof(values) / sizeof(values[0]); \
-    for (size_t i = 0; i < count; i++) {               \
-      VecPush(vector, s(values[i]));                   \
-    }                                                  \
+#define StringVectorPushMany(vector, ...)           \
+  do {                                              \
+    char *values[] = {__VA_ARGS__};                 \
+    size_t count = sizeof(values) / sizeof(char *); \
+    for (size_t i = 0; i < count; i++) {            \
+      String value = s(values[i]);                  \
+      VecPush(vector, value);                       \
+    }                                               \
   } while (0)
 
 void SetMaxStrSize(size_t size);
