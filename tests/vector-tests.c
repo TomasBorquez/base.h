@@ -64,18 +64,19 @@ void TestUnshiftShift() {
     String first = S("first");
     VecUnshift(vec, first);
     TEST_ASSERT(vec.length == 1, "Length increases after unshift");
-    TEST_ASSERT(StrEq(vec.data[0], S("first")), "Unshifted value is stored correctly");
+    TEST_ASSERT(StrEq(VecAt(vec, 0), S("first")), "Unshifted value is stored correctly");
 
     String zero = S("zero");
     VecUnshift(vec, zero);
     TEST_ASSERT(vec.length == 2, "Length increases after second unshift");
-    TEST_ASSERT(StrEq(vec.data[0], S("zero")), "Second unshifted value is at index 0");
-    TEST_ASSERT(StrEq(vec.data[1], S("first")), "Previous value is now at index 1");
+    TEST_ASSERT(StrEq(VecAt(vec, 0), S("zero")), "Second unshifted value is at index 0");
+    TEST_ASSERT(StrEq(VecAt(vec, 1), S("first")), "Previous value is now at index 1");
 
-    String shifted = *VecShift(vec);
+    String shifted = VecAt(vec, 0);
+    VecShift(vec);
     TEST_ASSERT(vec.length == 1, "Length decreases after shift");
     TEST_ASSERT(StrEq(shifted, S("zero")), "Shifted value is correct");
-    TEST_ASSERT(StrEq(vec.data[0], S("first")), "Remaining value is correct");
+    TEST_ASSERT(StrEq(VecAt(vec, 0), S("first")), "Remaining value is correct");
 
     VecFree(vec);
   }
@@ -118,13 +119,13 @@ void TestAccess() {
     VecPush(vec, S("second"));
     VecPush(vec, S("third"));
 
-    String first = *VecAt(vec, 0);
-    TEST_ASSERT(StrEq(first, S("first")), "VecAt(0) returns first element");
+    String *first = VecAtPtr(vec, 0);
+    TEST_ASSERT(StrEq(*first, S("first")), "VecAt(0) returns first element");
 
-    String second = *VecAt(vec, 1);
+    String second = VecAt(vec, 1);
     TEST_ASSERT(StrEq(second, S("second")), "VecAt(1) returns second element");
 
-    String third = *VecAt(vec, 2);
+    String third = VecAt(vec, 2);
     TEST_ASSERT(StrEq(third, S("third")), "VecAt(2) returns third element");
 
     VecFree(vec);
@@ -142,8 +143,8 @@ void TestCapacity() {
     TEST_ASSERT(vec.capacity == 128, "First push sets capacity to 128");
 
     StringVector vec2 = {0};
-    VecCreate(vec2, 10);
-    TEST_ASSERT(vec2.capacity == 10, "VecCreate sets correct initial capacity");
+    VecReserve(vec2, 10);
+    TEST_ASSERT(vec2.capacity == 10, "VecReserve sets correct initial capacity");
 
     StringVector vec3 = {0};
     for (size_t i = 0; i < 200; i++) {

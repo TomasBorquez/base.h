@@ -98,20 +98,15 @@ extern "C" {
 #  else
 #    error "Why C89 if you have C99"
 #  endif
-#endif
-
-#if defined(COMPILER_MSVC)
-#  if _MSVC_LANG >= 202000L
-#    define C_STANDARD_C23
-#    define C_STANDARD "C23"
-#  elif _MSVC_LANG >= 201704L
-#    define C_STANDARD_C17
-#    define C_STANDARD "C17"
-#  elif _MSVC_LANG >= 201103L
-#    define C_STANDARD_C11
-#    define C_STANDARD "C11"
-#  else
-#    error "How did you even get here?? Send an issue at github.com/TomasBorquez/mate.h"
+#else
+#  if defined(COMPILER_MSVC)
+#    if defined(_MSC_VER) && _MSC_VER >= 1920 // >= Visual Studio 2019
+#      define C_STANDARD_C17
+#      define C_STANDARD "C17"
+#    else
+#      define C_STANDARD_C11
+#      define C_STANDARD "C11"
+#    endif
 #  endif
 #endif
 
@@ -176,7 +171,6 @@ extern "C" {
 #    define snprintf _snprintf
 #    define vsnprintf _vsnprintf
 #  endif
-
 #endif
 
 /* --- Types and MACRO types --- */
@@ -236,8 +230,7 @@ typedef struct {
 void _custom_assert(const char *expr, const char *file, unsigned line, const char *format, ...) FORMAT_CHECK(4, 5);
 #define Assert(expression, ...) (void)((!!(expression)) || (_custom_assert(#expression, __FILE__, __LINE__, __VA_ARGS__), 0))
 
-/* --- Vector Macros --- */
-// TODO: Add MSVC like vector macros
+/* --- Vector --- */
 // TODO: `VecSort` implement some sorting algorithm for sorting the vector
 #define VEC_TYPE(typeName, valueType) \
   typedef struct {                    \
@@ -246,88 +239,29 @@ void _custom_assert(const char *expr, const char *file, unsigned line, const cha
     size_t capacity;                  \
   } typeName
 
-#define VecCreate(vector, count)                        \
+#define VecReserve(vector, count)                       \
   do {                                                  \
     vector.capacity = count;                            \
     vector.data = Malloc(count * sizeof(*vector.data)); \
   } while (0)
 
-// WARNING: Vector must always be initialized to zero `Vector vector = {0}` or `VecCreate()`
-#define VecPush(vector, value)                                                                                                        \
-  ({                                                                                                                                  \
-    Assert(vector.length <= vector.capacity, "VecPush: Possible memory corruption or vector not initialized, `Vector vector = {0}`"); \
-    if (vector.length >= vector.capacity) {                                                                                           \
-      if (vector.capacity == 0) vector.capacity = 128;                                                                                \
-      else vector.capacity *= 2;                                                                                                      \
-      vector.data = Realloc(vector.data, vector.capacity * sizeof(*vector.data));                                                     \
-    }                                                                                                                                 \
-    vector.data[vector.length++] = value;                                                                                             \
-    &vector.data[vector.length - 1];                                                                                                  \
-  })
+#define VecPush(vector, value) vecPush((void **)&(vector).data, &(vector).length, &(vector).capacity, sizeof(*vector.data), &(value));
 
-#define VecPop(vector)                                                 \
-  ({                                                                   \
-    Assert(vector.length > 0, "VecPop: Cannot pop from empty vector"); \
-    typeof(vector.data[0]) value = vector.data[vector.length - 1];     \
-    vector.length--;                                                   \
-    &value;                                                            \
-  })
+#define VecPop(vector) vecPop((vector).data, &(vector).length, sizeof(*vector.data));
 
-#define VecShift(vector)                                                                   \
-  ({                                                                                       \
-    Assert(vector.length != 0, "VecShift: Length should at least be >= 1");                \
-    typeof(vector.data[0]) value = vector.data[0];                                         \
-    memmove(&vector.data[0], &vector.data[1], (vector.length - 1) * sizeof(*vector.data)); \
-    vector.length--;                                                                       \
-    &value;                                                                                \
-  })
+#define VecShift(vector) vecShift((void **)&(vector).data, &(vector).length, sizeof(*vector.data))
 
-#define VecUnshift(vector, value)                                                      \
-  ({                                                                                   \
-    if (vector.length >= vector.capacity) {                                            \
-      if (vector.capacity == 0) vector.capacity = 2;                                   \
-      else vector.capacity *= 2;                                                       \
-      vector.data = Realloc(vector.data, vector.capacity * sizeof(*vector.data));      \
-    }                                                                                  \
-                                                                                       \
-    if (vector.length > 0) {                                                           \
-      memmove(&vector.data[1], &vector.data[0], vector.length * sizeof(*vector.data)); \
-    }                                                                                  \
-                                                                                       \
-    vector.data[0] = value;                                                            \
-    vector.length++;                                                                   \
-    &value;                                                                            \
-  })
+#define VecUnshift(vector, value) vecUnshift((void **)&(vector).data, &(vector).length, &(vector).capacity, sizeof(*vector.data), &(value))
 
-#define VecInsert(vector, value, index)                                                                    \
-  ({                                                                                                       \
-    Assert(index <= vector.length, "VecInsert: Index out of bounds for insertion");                        \
-    if (vector.length >= vector.capacity) {                                                                \
-      if (vector.capacity == 0) vector.capacity = 2;                                                       \
-      else vector.capacity *= 2;                                                                           \
-      vector.data = Realloc(vector.data, vector.capacity * sizeof(*vector.data));                          \
-    }                                                                                                      \
-    memmove(&vector.data[index + 1], &vector.data[index], (vector.length - index) * sizeof(*vector.data)); \
-    vector.data[index] = value;                                                                            \
-    vector.length++;                                                                                       \
-    &value;                                                                                                \
-  })
+#define VecInsert(vector, value, index) vecInsert((void **)&(vector).data, &(vector).length, &(vector).capacity, sizeof(*vector.data), &(value), index)
 
-#define VecAt(vector, index)                                                   \
-  ({                                                                           \
-    Assert(index >= 0 && index < vector.length, "VecAt: Index out of bounds"); \
-    &vector.data[index];                                                       \
-  })
+#define VecAt(vector, index) (*(__typeof__(*vector.data) *)vecAt((void **)&(vector).data, &(vector).length, index, sizeof(*vector.data)))
 
-#define VecFree(vector)        \
-  ({                           \
-    if (vector.data != NULL) { \
-      Free(vector.data);       \
-    }                          \
-    vector.data = NULL;        \
-  })
+#define VecAtPtr(vector, index) (vecAt((void **)&(vector).data, &(vector).length, index, sizeof(*vector.data)))
 
-#define VecForEach(vector, it) for (typeof(*vector.data) *it = vector.data; it < vector.data + vector.length; it++)
+#define VecFree(vector) vecFree((void **)&(vector).data)
+
+#define VecForEach(vector, it) for (__typeof__(*vector.data) *it = vector.data; it < vector.data + vector.length; it++)
 
 /* --- Time and Platforms --- */
 i64 TimeNow();
@@ -384,13 +318,13 @@ String F(Arena *arena, const char *format, ...) FORMAT_CHECK(2, 3);
 
 VEC_TYPE(StringVector, String);
 #define StringVectorPushMany(vector, ...)              \
-  ({                                                   \
+  do {                                                 \
     char *values[] = {__VA_ARGS__};                    \
     size_t count = sizeof(values) / sizeof(values[0]); \
     for (size_t i = 0; i < count; i++) {               \
       VecPush(vector, s(values[i]));                   \
     }                                                  \
-  })
+  } while (0)
 
 void SetMaxStrSize(size_t size);
 String StrNew(Arena *arena, char *str);
@@ -485,12 +419,12 @@ void LogSuccess(const char *format, ...) FORMAT_CHECK(1, 2);
 #define Min(a, b) (((a) < (b)) ? (a) : (b))
 #define Max(a, b) (((a) > (b)) ? (a) : (b))
 #define Clamp(a, x, b) (((x) < (a)) ? (a) : ((b) < (x)) ? (b) : (x))
-#define Swap(a, b)      \
-  ({                    \
-    typeof(a) temp = a; \
-    a = b;              \
-    b = temp;           \
-  })
+#define Swap(a, b) \
+  do {             \
+    a ^= b;        \
+    b ^= a;        \
+    a ^= b;        \
+  } while (0);
 
 /* --- Defer Macros --- */
 #if defined(DEFER_MACRO) // NOTE: Optional since not all compilers support it and not all C versions do either
@@ -561,6 +495,79 @@ bool IniGetBool(IniFile *ini, String key);
 */
 
 #if defined(BASE_IMPLEMENTATION)
+// --- Vector Implementation ---
+static void vecPush(void **data, size_t *length, size_t *capacity, size_t element_size, void *value) {
+  // WARNING: Vector must always be initialized to zero `Vector vector = {0}`
+  Assert(*length <= *capacity, "VecPush: Possible memory corruption or vector not initialized, `Vector vector = {0}`");
+
+  if (*length >= *capacity) {
+    if (*capacity == 0) *capacity = 128;
+    else *capacity *= 2;
+
+    *data = realloc(*data, *capacity * element_size);
+  }
+
+  void *address = (char *)(*data) + (*length * element_size);
+  memcpy(address, value, element_size);
+
+  (*length)++;
+}
+
+static void *vecPop(void *data, size_t *length, size_t element_size) {
+  Assert(*length > 0, "VecPop: Cannot pop from empty vector");
+  (*length)--;
+  return (char *)data + (*length * element_size);
+}
+
+static void vecShift(void **data, size_t *length, size_t element_size) {
+  Assert(*length != 0, "VecShift: Length should at least be >= 1");
+  memmove(*data, (char *)(*data) + element_size, ((*length) - 1) * element_size);
+  (*length)--;
+}
+
+static void vecUnshift(void **data, size_t *length, size_t *capacity, size_t element_size, const void *value) {
+  if (*length >= *capacity) {
+    if (*capacity == 0) *capacity = 2;
+    else *capacity *= 2;
+    *data = realloc(*data, *capacity * element_size);
+  }
+
+  if (*length > 0) {
+    memmove((char *)(*data) + element_size, *data, (*length) * element_size);
+  }
+
+  memcpy(*data, value, element_size);
+  (*length)++;
+}
+
+static void vecInsert(void **data, size_t *length, size_t *capacity, size_t element_size, void *value, size_t index) {
+  Assert(index <= *length, "VecInsert: Index out of bounds for insertion");
+
+  if (*length >= *capacity) {
+    if (*capacity == 0) *capacity = 2;
+    else *capacity *= 2;
+    *data = realloc(*data, *capacity * element_size);
+  }
+
+  if (index < *length) {
+    memmove((char *)(*data) + ((index + 1) * element_size), (char *)(*data) + (index * element_size), (*length - index) * element_size);
+  }
+
+  memcpy((char *)(*data) + (index * element_size), value, element_size);
+  (*length)++;
+}
+
+static void *vecAt(void **data, size_t *length, size_t index, size_t elementSize) {
+  Assert(index >= 0 && index < *length, "VecAt: Index out of bounds");
+  void *address = (char *)(*data) + (index * elementSize);
+  return address;
+}
+
+static void vecFree(void **data) {
+  free(*data);
+  *data = NULL;
+}
+
 // --- Time and Platforms Implementation ---
 #  if !defined(PLATFORM_WIN)
 

@@ -29,9 +29,9 @@ void EndTest() {
   LogInfo("Total tests run: %zu", totalTestsRun);
   if (totalTestsFailed > 1) {
     LogError("%zu tests failed!", totalTestsFailed);
-    return exit(1);
+    exit(1);
   }
 
   LogSuccess("All tests passed!");
-  return exit(0);
+  exit(0);
 }

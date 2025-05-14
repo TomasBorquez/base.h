@@ -21,13 +21,13 @@
 - [x] Function to reserve some memory `VecCreate()`
 - [x] Add better error logging, format `$function$: failed $path$ (or whatever params are passed), $error$` specially for file functions
 - [x] Add some basic tests for each function, and execute them on each PR
-- [ ] Make GNU extensions work in both MSVC and Clang
-    - [ ] Vectors
-    - [ ] ...
+- [x] Make GNU extensions work in both MSVC and Clang
+    - [x] Vectors
+    - [x] Math functions
+- [x] Test `MSVC` on windows
 - [ ] Static `MAX_PATH` is fragile:
     - [ ] https://eklitzke.org/path-max-is-tricky (GNU extension `char *get_current_dir_name()` dynamic length)
     - [ ] `wide paths` UTF16 on windows
 - [ ] `System()` to run commands is fragile 
     - [ ] Depends on the OS shell syntax which is not portable. It should use platform primitives such as CreateProcess on windows and fork+exec (or posix_spawn) on unix.
-- [ ] Test `MSVC` on windows
 - [ ] Add `StrIncludes`, `StrIncludesStart`, `StrIncludesEnd`

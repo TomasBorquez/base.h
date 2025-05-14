@@ -10,11 +10,7 @@ jobs:
     
     strategy:
       matrix:
-        compiler: [gcc, clang]
-    
-    defaults:
-      run:
-        shell: msys2 {0}
+        compiler: [gcc, clang, msvc]
     
     steps:
     - name: Checkout code with submodules
@@ -23,8 +19,9 @@ jobs:
         submodules: recursive
         fetch-depth: 0  
         token: ${{ secrets.GITHUB_TOKEN }}
-
+        
     - name: Setup MSYS2
+      if: matrix.compiler != 'msvc'
       uses: msys2/setup-msys2@v2
       with:
         msystem: MINGW64
@@ -34,52 +31,37 @@ jobs:
           mingw-w64-x86_64-gcc
           mingw-w64-x86_64-clang
     
-    - name: Test arena tests
+    - name: Run tests with GCC/Clang
+      if: matrix.compiler != 'msvc'
       working-directory: ./tests
+      shell: msys2 {0}
       run: |
-        ${{ matrix.compiler }} arena-tests.c -o arena-tests.exe
-        ./arena-tests.exe
-        if [ $? -ne 0 ]; then
-          echo "arena-tests failed with ${{ matrix.compiler }}"
-          exit 1
-        fi
+        for test in arena-tests file-system-tests ini-parser-tests string-tests vector-tests; do
+          echo "Running $test with ${{ matrix.compiler }}..."
+          ${{ matrix.compiler }} $test.c -o $test.exe
+          ./$test.exe
+          if [ $? -ne 0 ]; then
+            echo "$test failed with ${{ matrix.compiler }}"
+            exit 1
+          fi
+        done
     
-    - name: Test file system tests
+    - name: Run tests with MSVC
+      if: matrix.compiler == 'msvc'
       working-directory: ./tests
+      shell: cmd
       run: |
-        ${{ matrix.compiler }} file-system-tests.c -o file-system-tests.exe
-        ./file-system-tests.exe
-        if [ $? -ne 0 ]; then
-          echo "file-system-tests failed with ${{ matrix.compiler }}"
-          exit 1
-        fi
-    
-    - name: Test ini parser tests
-      working-directory: ./tests
-      run: |
-        ${{ matrix.compiler }} ini-parser-tests.c -o ini-parser-tests.exe
-        ./ini-parser-tests.exe
-        if [ $? -ne 0 ]; then
-          echo "ini-parser-tests failed with ${{ matrix.compiler }}"
-          exit 1
-        fi
-    
-    - name: Test string tests
-      working-directory: ./tests
-      run: |
-        ${{ matrix.compiler }} string-tests.c -o string-tests.exe
-        ./string-tests.exe
-        if [ $? -ne 0 ]; then
-          echo "string-tests failed with ${{ matrix.compiler }}"
-          exit 1
-        fi
-    
-    - name: Test vector tests
-      working-directory: ./tests
-      run: |
-        ${{ matrix.compiler }} vector-tests.c -o vector-tests.exe
-        ./vector-tests.exe
-        if [ $? -ne 0 ]; then
-          echo "vector-tests failed with ${{ matrix.compiler }}"
-          exit 1
-        fi
+        call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
+        @echo off
+        setlocal enabledelayedexpansion
+        set tests=arena-tests file-system-tests ini-parser-tests string-tests vector-tests
+        
+        for %%t in (%tests%) do (
+          echo Running %%t with MSVC...
+          cl.exe /Fe:%%t.exe %%t.c
+          %%t.exe
+          if !errorlevel! neq 0 (
+            echo "%%t failed with MSVC"
+            exit /b 1
+          )
+        )
