@@ -638,7 +638,7 @@ String GetCompiler() {
 #  elif defined(COMPILER_TCC)
   return S("tcc");
 #  elif defined(COMPILER_MSVC)
-  return S("MSVC");
+  return S("cl.exe");
 #  endif
 }
 
