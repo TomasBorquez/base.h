@@ -61,6 +61,8 @@ void TestStringManipulation() {
     StrToUpper(lowercase);
     TEST_ASSERT(lowercase.data[0] == 'H', "StrToUpper failed to convert first character");
     TEST_ASSERT(lowercase.data[4] == 'O', "StrToUpper failed to convert last character");
+
+    ArenaFree(arena);
   }
   TEST_END();
 }
@@ -86,6 +88,8 @@ void TestStringSplitting() {
     TEST_ASSERT(StrEq(lines.data[0], S("line1")), "First line incorrect");
     TEST_ASSERT(StrEq(lines.data[1], S("line2")), "Second line incorrect");
     TEST_ASSERT(StrEq(lines.data[2], S("line3")), "Third line incorrect");
+
+    ArenaFree(arena);
   }
   TEST_END();
 }
@@ -112,6 +116,8 @@ void TestStringBuilderFunctionality() {
     TEST_ASSERT(finalStr.data[0] == 'H', "Final builder string data incorrect");
     TEST_ASSERT(finalStr.data[5] == ' ', "Final builder string data incorrect");
     TEST_ASSERT(finalStr.data[6] == 'W', "Final builder string data incorrect");
+
+    ArenaFree(arena);
   }
   TEST_END();
 }
@@ -138,6 +144,8 @@ void TestStringSlicing() {
     String slice4 = StrSlice(arena, str, 5, 5);
     TEST_ASSERT(slice4.length == 0, "Empty slice length should be 0");
     TEST_ASSERT(StrEq(slice4, S("")), "Empty slice should equal empty string");
+
+    ArenaFree(arena);
   }
   TEST_END();
 }
@@ -148,26 +156,136 @@ void TestPathNormalization() {
     Arena *arena = ArenaCreate(128);
 
 #if defined(PLATFORM_WIN)
-    String path1 = S("./dir1/dir2/dir3");
-    String norm1 = NormalizePath(arena, path1);
-    TEST_ASSERT(StrEq(norm1, S("dir1\\dir2\\dir3")), "Path separator should be normalized");
+    // Test NormalizePath
+    {
+      String path = S("./folder/file.txt");
+      String normalized = NormalizePath(arena, path);
+      TEST_ASSERT(StrEq(normalized, S("folder\\file.txt")), "Should remove leading ./ and normalize slashes on Windows");
 
-    String path2 = S("./dir1/dir2/executable.exe");
-    String norm2 = NormalizeExePath(arena, path2);
-    TEST_ASSERT(StrEq(norm2, S("dir1\\dir2\\executable.exe")), "Path separator should be normalized");
+      path = S("folder/file.txt");
+      normalized = NormalizePath(arena, path);
+      TEST_ASSERT(StrEq(normalized, S("folder\\file.txt")), "Should normalize slashes on Windows");
+
+      path = S(".\\folder\\file.txt");
+      normalized = NormalizePath(arena, path);
+      TEST_ASSERT(StrEq(normalized, S("folder\\file.txt")), "Should remove leading .\\ on Windows");
+    }
+
+    // Test NormalizeExePath
+    {
+      String path = S("./bin/app");
+      String normalized = NormalizeExePath(arena, path);
+      TEST_ASSERT(StrEq(normalized, S("bin\\app.exe")), "Should remove leading ./ and add .exe extension on Windows");
+
+      path = S("bin/app.exe");
+      normalized = NormalizeExePath(arena, path);
+      TEST_ASSERT(StrEq(normalized, S("bin\\app.exe")), "Should keep .exe extension and normalize slashes on Windows");
+
+      path = S(".\\bin\\app");
+      normalized = NormalizeExePath(arena, path);
+      TEST_ASSERT(StrEq(normalized, S("bin\\app.exe")), "Should remove leading .\\ and add .exe extension on Windows");
+    }
+
+    // Test NormalizeStaticLibPath
+    {
+      String path = S("./lib/mylib");
+      String normalized = NormalizeStaticLibPath(arena, path);
+      TEST_ASSERT(StrEq(normalized, S("lib\\mylib.lib")), "Should remove leading ./ and add .lib extension on Windows");
+
+      path = S("lib/mylib.a");
+      normalized = NormalizeStaticLibPath(arena, path);
+      TEST_ASSERT(StrEq(normalized, S("lib\\mylib.lib")), "Should convert .a extension to .lib on Windows");
+
+      path = S("lib/mylib.lib");
+      normalized = NormalizeStaticLibPath(arena, path);
+      TEST_ASSERT(StrEq(normalized, S("lib\\mylib.lib")), "Should keep .lib extension and normalize slashes on Windows");
+
+      path = S(".\\lib\\mylib");
+      normalized = NormalizeStaticLibPath(arena, path);
+      TEST_ASSERT(StrEq(normalized, S("lib\\mylib.lib")), "Should remove leading .\\ and add .lib extension on Windows");
+    }
+
+    // Test NormalizePathStart
+    {
+      String path = S("./folder/file.txt");
+      String normalized = NormalizePathStart(arena, path);
+      TEST_ASSERT(StrEq(normalized, S("folder/file.txt")), "Should remove leading ./ on Windows without changing slashes");
+
+      path = S("folder/file.txt");
+      normalized = NormalizePathStart(arena, path);
+      TEST_ASSERT(StrEq(normalized, S("folder/file.txt")), "Should keep path unchanged when no leading ./ on Windows");
+
+      path = S(".\\folder\\file.txt");
+      normalized = NormalizePathStart(arena, path);
+      TEST_ASSERT(StrEq(normalized, S("folder\\file.txt")), "Should remove leading .\\ on Windows without changing slashes");
+    }
 #else
-    String path1 = S("./dir1/dir2/dir3");
-    String norm1 = NormalizePath(arena, path1);
-    TEST_ASSERT(StrEq(norm1, S("dir1/dir2/dir3")), "Path separator should be normalized");
+    // Test NormalizePath
+    {
+      String path = S("./folder/file.txt");
+      String normalized = NormalizePath(arena, path);
+      TEST_ASSERT(StrEq(normalized, S("folder/file.txt")), "Should remove leading ./ on Linux");
 
-    String path2 = S("./dir1/dir2/executable.exe");
-    String norm2 = NormalizeExePath(arena, path2);
-    TEST_ASSERT(StrEq(norm2, S("dir1/dir2/executable")), "Path separator should be normalized");
+      path = S("folder/file.txt");
+      normalized = NormalizePath(arena, path);
+      TEST_ASSERT(StrEq(normalized, S("folder/file.txt")), "Should keep path unchanged when no leading ./ on Linux");
+
+      path = S(".\\folder\\file.txt");
+      normalized = NormalizePath(arena, path);
+      TEST_ASSERT(StrEq(normalized, S("folder/file.txt")), "Should remove leading .\\ and normalize slashes on Linux");
+    }
+
+    // Test NormalizeExePath
+    {
+      String path = S("./bin/app.exe");
+      String normalized = NormalizeExePath(arena, path);
+      TEST_ASSERT(StrEq(normalized, S("bin/app")), "Should remove leading ./ and remove .exe extension on Linux");
+
+      path = S("bin/app");
+      normalized = NormalizeExePath(arena, path);
+      TEST_ASSERT(StrEq(normalized, S("bin/app")), "Should keep path unchanged when no .exe extension on Linux");
+
+      path = S(".\\bin\\app.exe");
+      normalized = NormalizeExePath(arena, path);
+      TEST_ASSERT(StrEq(normalized, S("bin/app")), "Should remove leading .\\ and remove .exe extension on Linux");
+    }
+
+    // Test NormalizeStaticLibPath
+    {
+      String path = S("./lib/mylib");
+      String normalized = NormalizeStaticLibPath(arena, path);
+      TEST_ASSERT(StrEq(normalized, S("lib/mylib.a")), "Should remove leading ./ and add .a extension on Linux");
+
+      path = S("lib/mylib.lib");
+      normalized = NormalizeStaticLibPath(arena, path);
+      TEST_ASSERT(StrEq(normalized, S("lib/mylib.a")), "Should convert .lib extension to .a on Linux");
+
+      path = S("lib/mylib.a");
+      normalized = NormalizeStaticLibPath(arena, path);
+      TEST_ASSERT(StrEq(normalized, S("lib/mylib.a")), "Should keep .a extension on Linux");
+
+      path = S(".\\lib\\mylib");
+      normalized = NormalizeStaticLibPath(arena, path);
+      TEST_ASSERT(StrEq(normalized, S("lib/mylib.a")), "Should remove leading .\\ and add .a extension on Linux");
+    }
+
+    // Test NormalizePathStart
+    {
+      String path = S("./folder/file.txt");
+      String normalized = NormalizePathStart(arena, path);
+      TEST_ASSERT(StrEq(normalized, S("folder/file.txt")), "Should remove leading ./ on Linux");
+
+      path = S("folder/file.txt");
+      normalized = NormalizePathStart(arena, path);
+      TEST_ASSERT(StrEq(normalized, S("folder/file.txt")), "Should keep path unchanged when no leading ./ on Linux");
+
+      path = S(".\\folder\\file.txt");
+      normalized = NormalizePathStart(arena, path);
+      TEST_ASSERT(StrEq(normalized, S("folder\\file.txt")), "Should remove leading .\\ on Linux without changing slashes");
+    }
 #endif
 
-    String path3 = S("./dir1/dir2");
-    String norm3 = NormalizePathStart(arena, path3);
-    TEST_ASSERT(StrEq(norm3, S("dir1/dir2")), "Path separator should be normalized");
+    ArenaFree(arena);
   }
   TEST_END();
 }
@@ -202,6 +320,8 @@ void TestStringEdgeCases() {
     StrTrim(&whitespace);
     TEST_ASSERT(whitespace.length == 5, "Trimmed string length incorrect");
     TEST_ASSERT(StrEq(whitespace, S("hello")), "Trimmed string content incorrect");
+
+    ArenaFree(arena);
   }
   TEST_END();
 }

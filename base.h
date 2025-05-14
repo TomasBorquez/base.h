@@ -412,6 +412,7 @@ String StrSlice(Arena *arena, String str, size_t start, size_t end);
 
 String NormalizePath(Arena *arena, String path);
 String NormalizeExePath(Arena *arena, String path);
+String NormalizeStaticLibPath(Arena *arena, String path);
 String NormalizePathStart(Arena *arena, String path);
 
 typedef struct {
@@ -1163,6 +1164,23 @@ String F(Arena *arena, const char *format, ...) {
   return (String){.length = size - 1, .data = buffer};
 }
 
+String normSlashes(String path) {
+#  if defined(PLATFORM_WIN)
+  for (size_t i = 0; i < path.length; i++) {
+    if (path.data[i] == '/') {
+      path.data[i] = '\\';
+    }
+  }
+#  else
+  for (size_t i = 0; i < path.length; i++) {
+    if (path.data[i] == '\\') {
+      path.data[i] = '/';
+    }
+  }
+#  endif
+  return path;
+}
+
 String NormalizePath(Arena *arena, String path) {
   String result;
   if (path.length >= 2 && path.data[0] == '.' && (path.data[1] == '/' || path.data[1] == '\\')) {
@@ -1171,18 +1189,7 @@ String NormalizePath(Arena *arena, String path) {
     result = StrNewSize(arena, path.data, path.length);
   }
 
-  String platform = GetPlatform();
-  if (StrEq(platform, S("linux")) || StrEq(platform, S("macos"))) {
-    return result;
-  }
-
-  for (size_t i = 0; i < result.length; i++) {
-    if (result.data[i] == '/') {
-      result.data[i] = '\\';
-    }
-  }
-
-  return result;
+  return normSlashes(result);
 }
 
 String NormalizeExePath(Arena *arena, String path) {
@@ -1204,24 +1211,74 @@ String NormalizeExePath(Arena *arena, String path) {
     }
   }
 
-  if (StrEq(platform, S("windows")) && !hasExe) {
-    result = StrConcat(arena, result, exeExtension);
-  }
-
-  if (StrEq(platform, S("linux")) || StrEq(platform, S("macos"))) {
-    if (hasExe) {
-      return StrSlice(arena, result, 0, result.length - exeExtension.length);
+  if (StrEq(platform, S("windows"))) {
+    if (!hasExe) {
+      result = StrConcat(arena, result, exeExtension);
     }
-    return result;
+
+    return normSlashes(result);
   }
 
-  for (size_t i = 0; i < result.length; i++) {
-    if (result.data[i] == '/') {
-      result.data[i] = '\\';
+  if (hasExe) {
+    result = StrSlice(arena, result, 0, result.length - exeExtension.length);
+  }
+
+  return normSlashes(result);
+}
+
+String NormalizeStaticLibPath(Arena *arena, String path) {
+  String platform = GetPlatform();
+  String result;
+
+  if (path.length >= 2 && path.data[0] == '.' && (path.data[1] == '/' || path.data[1] == '\\')) {
+    result = StrNewSize(arena, path.data + 2, path.length - 2);
+  } else {
+    result = StrNewSize(arena, path.data, path.length);
+  }
+
+  bool hasLibExt = false;
+  String libExtension;
+  String aExtension = S(".a");
+  String libWinExtension = S(".lib");
+  if (result.length >= aExtension.length) {
+    String resultEnd = StrSlice(arena, result, result.length - aExtension.length, result.length);
+    if (StrEq(resultEnd, aExtension)) {
+      hasLibExt = true;
+      libExtension = aExtension;
     }
   }
 
-  return result;
+  if (!hasLibExt && result.length >= libWinExtension.length) {
+    String resultEnd = StrSlice(arena, result, result.length - libWinExtension.length, result.length);
+    if (StrEq(resultEnd, libWinExtension)) {
+      hasLibExt = true;
+      libExtension = libWinExtension;
+    }
+  }
+
+  if (StrEq(platform, S("windows"))) {
+    if (hasLibExt && !StrEq(libExtension, libWinExtension)) {
+      result = StrSlice(arena, result, 0, result.length - libExtension.length);
+      hasLibExt = false;
+    }
+
+    if (!hasLibExt) {
+      result = StrConcat(arena, result, libWinExtension);
+    }
+
+    return normSlashes(result);
+  }
+
+  if (hasLibExt && !StrEq(libExtension, aExtension)) {
+    result = StrSlice(arena, result, 0, result.length - libExtension.length);
+    hasLibExt = false;
+  }
+
+  if (!hasLibExt) {
+    result = StrConcat(arena, result, aExtension);
+  }
+
+  return normSlashes(result);
 }
 
 String NormalizePathStart(Arena *arena, String path) {
