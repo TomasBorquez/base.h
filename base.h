@@ -1,7 +1,7 @@
 /* MIT License
 
   base.h - Better cross-platform STD
-  Version - 2025-05-14 (0.1.17):
+  Version - 2025-05-15 (0.1.18):
   https://github.com/TomasBorquez/base.h
 
   Usage:
@@ -259,7 +259,7 @@ void _custom_assert(const char *expr, const char *file, unsigned line, const cha
 
 #define VecAtPtr(vector, index) (vecAt((void **)&(vector).data, &(vector).length, index, sizeof(*vector.data)))
 
-#define VecFree(vector) vecFree((void **)&(vector).data)
+#define VecFree(vector) vecFree((void **)&(vector).data, &(vector).length, &(vector).capacity)
 
 #define VecForEach(vector, it) for (__typeof__(*vector.data) *it = vector.data; it < vector.data + vector.length; it++)
 
@@ -347,8 +347,10 @@ String StrSlice(Arena *arena, String str, size_t start, size_t end);
 
 String NormalizePath(Arena *arena, String path);
 String NormalizeExePath(Arena *arena, String path);
+String NormalizeExtension(Arena *arena, String path);
 String NormalizeStaticLibPath(Arena *arena, String path);
 String NormalizePathStart(Arena *arena, String path);
+String NormalizePathEnd(Arena *arena, String path);
 
 typedef struct {
   size_t capacity;
@@ -500,12 +502,13 @@ bool IniGetBool(IniFile *ini, String key);
 static void vecPush(void **data, size_t *length, size_t *capacity, size_t element_size, void *value) {
   // WARNING: Vector must always be initialized to zero `Vector vector = {0}`
   Assert(*length <= *capacity, "VecPush: Possible memory corruption or vector not initialized, `Vector vector = {0}`");
+  Assert(!(*length > 0 && *data == NULL), "VecPush: Possible memory corruption, data should be NULL only if length == 0");
 
   if (*length >= *capacity) {
     if (*capacity == 0) *capacity = 128;
     else *capacity *= 2;
 
-    *data = realloc(*data, *capacity * element_size);
+    *data = Realloc(*data, *capacity * element_size);
   }
 
   void *address = (char *)(*data) + (*length * element_size);
@@ -530,7 +533,7 @@ static void vecUnshift(void **data, size_t *length, size_t *capacity, size_t ele
   if (*length >= *capacity) {
     if (*capacity == 0) *capacity = 2;
     else *capacity *= 2;
-    *data = realloc(*data, *capacity * element_size);
+    *data = Realloc(*data, *capacity * element_size);
   }
 
   if (*length > 0) {
@@ -547,7 +550,7 @@ static void vecInsert(void **data, size_t *length, size_t *capacity, size_t elem
   if (*length >= *capacity) {
     if (*capacity == 0) *capacity = 2;
     else *capacity *= 2;
-    *data = realloc(*data, *capacity * element_size);
+    *data = Realloc(*data, *capacity * element_size);
   }
 
   if (index < *length) {
@@ -564,9 +567,11 @@ static void *vecAt(void **data, size_t *length, size_t index, size_t elementSize
   return address;
 }
 
-static void vecFree(void **data) {
+static void vecFree(void **data, size_t *length, size_t *capacity) {
   free(*data);
   *data = NULL;
+  *length = 0;
+  *capacity = 0;
 }
 
 // --- Time and Platforms Implementation ---
@@ -1234,6 +1239,37 @@ String NormalizeExePath(Arena *arena, String path) {
   return normSlashes(result);
 }
 
+String NormalizeExtension(Arena *arena, String path) {
+  String result;
+
+  if (path.length >= 2 && path.data[0] == '.' && (path.data[1] == '/' || path.data[1] == '\\')) {
+    result = StrNewSize(arena, path.data + 2, path.length - 2);
+  } else {
+    result = StrNewSize(arena, path.data, path.length);
+  }
+
+  size_t filenameStart = 0;
+  for (size_t i = 0; i < result.length; i++) {
+    if (result.data[i] == '/' || result.data[i] == '\\') {
+      filenameStart = i + 1;
+    }
+  }
+
+  size_t lastDotIndex = 0;
+  for (size_t i = 0; i < result.length; i++) {
+    if (result.data[i] == '.') {
+      lastDotIndex = i;
+    }
+  }
+
+  if (lastDotIndex <= filenameStart) {
+    return normSlashes(result);
+  }
+
+  result = StrSlice(arena, result, filenameStart, lastDotIndex);
+  return normSlashes(result);
+}
+
 String NormalizeStaticLibPath(Arena *arena, String path) {
   String platform = GetPlatform();
   String result;
@@ -1299,6 +1335,17 @@ String NormalizePathStart(Arena *arena, String path) {
   }
 
   return result;
+}
+
+String NormalizePathEnd(Arena *arena, String path) {
+  size_t lastSlashIndex = 0;
+  for (size_t i = 0; i < path.length; i++) {
+    if (path.data[i] == '/' || path.data[i] == '\\') {
+      lastSlashIndex = i + 1;
+    }
+  }
+
+  return StrNewSize(arena, path.data + lastSlashIndex, path.length - lastSlashIndex);
 }
 
 StringBuilder StringBuilderCreate(Arena *arena) {

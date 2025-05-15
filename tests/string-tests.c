@@ -219,6 +219,21 @@ void TestPathNormalization() {
       normalized = NormalizePathStart(arena, path);
       TEST_ASSERT(StrEq(normalized, S("folder\\file.txt")), "Should remove leading .\\ on Windows without changing slashes");
     }
+
+    // Test NormalizePathEnd
+    {
+      String path = S("./folder/file.txt");
+      String normalized = NormalizePathEnd(arena, path);
+      TEST_ASSERT(StrEq(normalized, S("file.txt")), "Should remove leading ./ on Windows without changing slashes");
+
+      path = S("folder/file.txt");
+      normalized = NormalizePathEnd(arena, path);
+      TEST_ASSERT(StrEq(normalized, S("file.txt")), "Should keep path unchanged when no leading ./ on Windows");
+
+      path = S(".\\folder\\file.txt");
+      normalized = NormalizePathEnd(arena, path);
+      TEST_ASSERT(StrEq(normalized, S("file.txt")), "Should remove leading .\\ on Windows without changing slashes");
+    }
 #else
     // Test NormalizePath
     {
@@ -282,6 +297,21 @@ void TestPathNormalization() {
       path = S(".\\folder\\file.txt");
       normalized = NormalizePathStart(arena, path);
       TEST_ASSERT(StrEq(normalized, S("folder\\file.txt")), "Should remove leading .\\ on Linux without changing slashes");
+    }
+
+    // Test NormalizePathEnd
+    {
+      String path = S("./folder/file.txt");
+      String normalized = NormalizePathEnd(arena, path);
+      TEST_ASSERT(StrEq(normalized, S("file.txt")), "Should remove leading ./ on Windows without changing slashes");
+
+      path = S("folder/file.txt");
+      normalized = NormalizePathEnd(arena, path);
+      TEST_ASSERT(StrEq(normalized, S("file.txt")), "Should keep path unchanged when no leading ./ on Windows");
+
+      path = S(".\\folder\\file.txt");
+      normalized = NormalizePathEnd(arena, path);
+      TEST_ASSERT(StrEq(normalized, S("file.txt")), "Should remove leading .\\ on Windows without changing slashes");
     }
 #endif
 
