@@ -945,6 +945,10 @@ String StrNew(Arena *arena, char *str) {
 }
 
 String s(char *msg) {
+  if (msg == NULL) {
+    return (String){0};
+  }
+
   return (String){
       .length = strlen(msg),
       .data = msg,
