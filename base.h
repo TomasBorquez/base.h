@@ -281,6 +281,9 @@ bool isLinux();
 bool isMacOs();
 bool isWindows();
 bool isUnix();
+bool isAndroid();
+bool isEmscripten();
+bool isLinuxDRM();
 
 typedef enum { WINDOWS, LINUX, MACOS } Platform;
 Platform GetPlatform();
@@ -296,6 +299,7 @@ typedef enum {
 } GeneralError;
 
 String ErrToStr(errno_t err);
+
 /* --- Arena --- */
 typedef struct __ArenaChunk {
   struct __ArenaChunk *next;
@@ -685,6 +689,14 @@ bool isUnix() {
 #  endif
 }
 
+bool isAndroid() {
+#  if defined(PLATFORM_EMSCRIPTEN)
+  return true;
+#  else
+  return false;
+#  endif
+}
+
 bool isEmscripten() {
 #  if defined(PLATFORM_EMSCRIPTEN)
   return true;
@@ -754,7 +766,7 @@ void WaitTime(i64 ms) {
 }
 
 /* --- Error Implementation --- */
-String FileErrToStr(errno_t err) {
+String ErrToStr(errno_t err) {
   if (err < 100) {
 #  if defined(PLATFORM_WIN)
     char buffer[256];
@@ -2048,25 +2060,25 @@ void LogInit() {
 /* --- INI Parser Implementation --- */
 errno_t IniParse(String path, IniFile *result) {
   File stats = {0};
-  errno_t err = FileStats(path, &stats);
+  FileStatsError err = FileStats(path, &stats);
   if (err == FILE_STATS_FILE_NOT_EXIST) {
     LogWarn("IniParse: %s does not exist, creating...", path.data);
-    errno_t fileResetErr = FileReset(path);
-    Assert(fileResetErr == SUCCESS, "IniParse: Failed creating file for path %s, err: %d", path.data, fileResetErr);
+    FileWriteError err = FileReset(path);
+    Assert(err == FILE_WRITE_SUCCESS, "IniParse: Failed creating file for path %s, err: %d", path.data, err);
 
     result->arena = ArenaCreate(sizeof(String) * 10); // Initialize arena
     return SUCCESS;
   }
 
-  if (err != SUCCESS) {
+  if (err != FILE_STATS_SUCCESS) {
     return err;
   }
 
   String buffer;
   result->arena = ArenaCreate(stats.size * 4);
-  err = FileRead(result->arena, path, &buffer);
-  if (err != SUCCESS) {
-    return err;
+  FileReadError readError = FileRead(result->arena, path, &buffer);
+  if (readError != FILE_READ_SUCCESS) {
+    return readError;
   }
 
   StringVector iniSplit = StrSplitNewLine(result->arena, buffer);
@@ -2099,15 +2111,15 @@ errno_t IniParse(String path, IniFile *result) {
 }
 
 errno_t IniWrite(String path, IniFile *iniFile) {
-  errno_t err = FileReset(path);
-  if (err != SUCCESS) {
+  FileWriteError err = FileReset(path);
+  if (err != FILE_WRITE_SUCCESS) {
     return err;
   }
 
   VecForEach(iniFile->data, entry) {
     String value = F(iniFile->arena, "%s=%s", entry->key.data, entry->value.data);
-    err = FileAdd(path, value);
-    if (err != SUCCESS) {
+    FileAddError err = FileAdd(path, value);
+    if (err != FILE_ADD_SUCCESS) {
       return err;
     }
   }
