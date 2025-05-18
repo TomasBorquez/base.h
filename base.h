@@ -285,10 +285,10 @@ bool isAndroid();
 bool isEmscripten();
 bool isLinuxDRM();
 
-typedef enum { WINDOWS, LINUX, MACOS } Platform;
+typedef enum { WINDOWS = 1, LINUX, MACOS } Platform;
 Platform GetPlatform();
 
-typedef enum { GCC, CLANG, TCC, MSVC } Compiler;
+typedef enum { GCC = 1, CLANG, TCC, MSVC } Compiler;
 Compiler GetCompiler();
 
 /* --- Error --- */
