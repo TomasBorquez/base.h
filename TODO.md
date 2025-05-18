@@ -25,6 +25,15 @@
     - [x] Vectors
     - [x] Math functions
 - [x] Test `MSVC` on windows
+- [x] Move everything to `typedef enum` returns, for type "safety"
+- [ ] Platforms
+    - [ ] PLATFORM_DRM
+    - [x] `GetPlatform()` should return enum of platforms
+    - [x] `isLinux()` should be on base
+    - [x] `isWindows()` as well
+    - [x] add `isAndroid()`
+    - [x] add `isMacOs()`
+    - [ ] add `isEmscripten()`
 - [ ] Static `MAX_PATH` is fragile:
     - [ ] https://eklitzke.org/path-max-is-tricky (GNU extension `char *get_current_dir_name()` dynamic length)
     - [ ] `wide paths` UTF16 on windows

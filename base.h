@@ -1,7 +1,7 @@
 /* MIT License
 
   base.h - Better cross-platform STD
-  Version - 2025-05-15 (0.1.18):
+  Version - 2025-05-18 (0.1.19):
   https://github.com/TomasBorquez/base.h
 
   Usage:
@@ -54,12 +54,22 @@ extern "C" {
 
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32__)
 #  define PLATFORM_WIN
-#elif defined(__linux__) || defined(__gnu_linux__)
-#  define PLATFORM_LINUX
-#elif defined(__APPLE__) || defined(__MACH__)
-#  define PLATFORM_MACOS
 #else
-#  error "The codebase only supports linux, macos and windows"
+#  define PLATFORM_UNIX
+#  if defined(__ANDROID__)
+#    define PLATFORM_ANDROID
+#  elif defined(__linux__) || defined(__gnu_linux__)
+#    define PLATFORM_LINUX
+#    if defined(USE_DRM) || defined(HAVE_DRM)
+#      define PLATFORM_DRM
+#    endif
+#  elif defined(__APPLE__) || defined(__MACH__)
+#    define PLATFORM_MACOS
+#  elif defined(__EMSCRIPTEN__)
+#    define PLATFORM_EMSCRIPTEN
+#  else
+#    error "The codebase only supports linux, macos, windows, android and emscripten"
+#  endif
 #endif
 
 #if defined(COMPILER_CLANG)
@@ -266,15 +276,24 @@ void _custom_assert(const char *expr, const char *file, unsigned line, const cha
 /* --- Time and Platforms --- */
 i64 TimeNow();
 void WaitTime(i64 ms);
-String GetCompiler();
-String GetPlatform();
+
+bool isLinux();
+bool isMacOs();
+bool isWindows();
+bool isUnix();
+
+typedef enum { WINDOWS, LINUX, MACOS } Platform;
+Platform GetPlatform();
+
+typedef enum { GCC, CLANG, TCC, MSVC } Compiler;
+Compiler GetCompiler();
 
 /* --- Error --- */
 typedef i32 errno_t;
 
-enum GeneralError {
+typedef enum {
   SUCCESS = 0,
-};
+} GeneralError;
 
 String ErrToStr(errno_t err);
 /* --- Arena --- */
@@ -384,26 +403,26 @@ void SetCwd(char *destination);
 bool Mkdir(String path); // NOTE: Mkdir if not exist
 StringVector ListDir(Arena *arena, String path);
 
-enum FileStatsError { FILE_GET_ATTRIBUTES_FAILED = 100, FILE_STATS_FILE_NOT_EXIST };
-WARN_UNUSED errno_t FileStats(String path, File *file);
+typedef enum { FILE_GET_ATTRIBUTES_FAILED = 100, FILE_STATS_FILE_NOT_EXIST } FileStatsError;
+WARN_UNUSED FileStatsError FileStats(String path, File *file);
 
-enum FileReadError { FILE_NOT_EXIST = 200, FILE_OPEN_FAILED, FILE_GET_SIZE_FAILED, FILE_READ_FAILED };
-WARN_UNUSED errno_t FileRead(Arena *arena, String path, String *result);
+typedef enum { FILE_NOT_EXIST = 200, FILE_OPEN_FAILED, FILE_GET_SIZE_FAILED, FILE_READ_FAILED } FileReadError;
+WARN_UNUSED FileReadError FileRead(Arena *arena, String path, String *result);
 
-enum FileWriteError { FILE_WRITE_OPEN_FAILED = 300, FILE_WRITE_ACCESS_DENIED, FILE_WRITE_NO_MEMORY, FILE_WRITE_NOT_FOUND, FILE_WRITE_DISK_FULL, FILE_WRITE_IO_ERROR };
-WARN_UNUSED errno_t FileWrite(String path, String data);
+typedef enum { FILE_WRITE_OPEN_FAILED = 300, FILE_WRITE_ACCESS_DENIED, FILE_WRITE_NO_MEMORY, FILE_WRITE_NOT_FOUND, FILE_WRITE_DISK_FULL, FILE_WRITE_IO_ERROR } FileWriteError;
+WARN_UNUSED FileWriteError FileWrite(String path, String data);
 
-// enum FileWriteError - Same error enum since it uses `FileWrite("")` under the hood
-WARN_UNUSED errno_t FileReset(String path);
+// NOTE: Same error enum since it uses `FileWrite("")` under the hood
+WARN_UNUSED FileWriteError FileReset(String path);
 
-enum FileAddError { FILE_ADD_OPEN_FAILED = 400, FILE_ADD_ACCESS_DENIED, FILE_ADD_NO_MEMORY, FILE_ADD_NOT_FOUND, FILE_ADD_DISK_FULL, FILE_ADD_IO_ERROR };
-WARN_UNUSED errno_t FileAdd(String path, String data); // NOTE: Adds `\n` at the end always
+typedef enum { FILE_ADD_OPEN_FAILED = 400, FILE_ADD_ACCESS_DENIED, FILE_ADD_NO_MEMORY, FILE_ADD_NOT_FOUND, FILE_ADD_DISK_FULL, FILE_ADD_IO_ERROR } FileAddError;
+WARN_UNUSED FileAddError FileAdd(String path, String data); // NOTE: Adds `\n` at the end always
 
-enum FileDeleteError { FILE_DELETE_ACCESS_DENIED = 500, FILE_DELETE_NOT_FOUND, FILE_DELETE_IO_ERROR };
-WARN_UNUSED errno_t FileDelete(String path);
+typedef enum { FILE_DELETE_ACCESS_DENIED = 500, FILE_DELETE_NOT_FOUND, FILE_DELETE_IO_ERROR } FileDeleteError;
+WARN_UNUSED FileDeleteError FileDelete(String path);
 
-enum FileRenameError { FILE_RENAME_ACCESS_DENIED = 600, FILE_RENAME_NOT_FOUND, FILE_RENAME_IO_ERROR };
-WARN_UNUSED errno_t FileRename(String oldPath, String newPath);
+typedef enum { FILE_RENAME_ACCESS_DENIED = 600, FILE_RENAME_NOT_FOUND, FILE_RENAME_IO_ERROR } FileRenameError;
+WARN_UNUSED FileRenameError FileRename(String oldPath, String newPath);
 
 /* --- Logger --- */
 #define _RESET "\x1b[0m"
@@ -496,7 +515,6 @@ bool IniGetBool(IniFile *ini, String key);
    base.h - Implementation of base.h
    https://github.com/TomasBorquez/base.h
 */
-
 #if defined(BASE_IMPLEMENTATION)
 // --- Vector Implementation ---
 static void vecPush(void **data, size_t *length, size_t *capacity, size_t element_size, void *value) {
@@ -635,25 +653,73 @@ WARN_UNUSED errno_t fopen_s(FILE **streamptr, const char *filename, const char *
 }
 #  endif
 
-String GetCompiler() {
-#  if defined(COMPILER_CLANG)
-  return S("clang");
-#  elif defined(COMPILER_GCC)
-  return S("gcc");
-#  elif defined(COMPILER_TCC)
-  return S("tcc");
-#  elif defined(COMPILER_MSVC)
-  return S("cl.exe");
+bool isLinux() {
+#  if defined(PLATFORM_LINUX)
+  return true;
+#  else
+  return false;
 #  endif
 }
 
-String GetPlatform() {
+bool isMacOs() {
+#  if defined(PLATFORM_MACOS)
+  return true;
+#  else
+  return false;
+#  endif
+}
+
+bool isWindows() {
 #  if defined(PLATFORM_WIN)
-  return S("windows");
+  return true;
+#  else
+  return false;
+#  endif
+}
+
+bool isUnix() {
+#  if defined(PLATFORM_UNIX)
+  return true;
+#  else
+  return false;
+#  endif
+}
+
+bool isEmscripten() {
+#  if defined(PLATFORM_EMSCRIPTEN)
+  return true;
+#  else
+  return false;
+#  endif
+}
+
+bool isLinuxDRM() {
+#  if defined(PLATFORM_DRM)
+  return true;
+#  else
+  return false;
+#  endif
+}
+
+Compiler GetCompiler() {
+#  if defined(COMPILER_CLANG)
+  return CLANG;
+#  elif defined(COMPILER_GCC)
+  return GCC;
+#  elif defined(COMPILER_TCC)
+  return TCC;
+#  elif defined(COMPILER_MSVC)
+  return MSVC;
+#  endif
+}
+
+Platform GetPlatform() {
+#  if defined(PLATFORM_WIN)
+  return WINDOWS;
 #  elif defined(PLATFORM_LINUX)
-  return S("linux");
+  return LINUX;
 #  elif defined(PLATFORM_MACOS)
-  return S("macos");
+  return MACOS;
 #  endif
 }
 
@@ -1210,7 +1276,7 @@ String NormalizePath(Arena *arena, String path) {
 }
 
 String NormalizeExePath(Arena *arena, String path) {
-  String platform = GetPlatform();
+  Platform platform = GetPlatform();
   String result;
 
   if (path.length >= 2 && path.data[0] == '.' && (path.data[1] == '/' || path.data[1] == '\\')) {
@@ -1228,7 +1294,7 @@ String NormalizeExePath(Arena *arena, String path) {
     }
   }
 
-  if (StrEq(platform, S("windows"))) {
+  if (platform == WINDOWS) {
     if (!hasExe) {
       result = StrConcat(arena, result, exeExtension);
     }
@@ -1275,7 +1341,7 @@ String NormalizeExtension(Arena *arena, String path) {
 }
 
 String NormalizeStaticLibPath(Arena *arena, String path) {
-  String platform = GetPlatform();
+  Platform platform = GetPlatform();
   String result;
 
   if (path.length >= 2 && path.data[0] == '.' && (path.data[1] == '/' || path.data[1] == '\\')) {
@@ -1304,7 +1370,7 @@ String NormalizeStaticLibPath(Arena *arena, String path) {
     }
   }
 
-  if (StrEq(platform, S("windows"))) {
+  if (platform == WINDOWS) {
     if (hasLibExt && !StrEq(libExtension, libWinExtension)) {
       result = StrSlice(arena, result, 0, result.length - libExtension.length);
       hasLibExt = false;
