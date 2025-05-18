@@ -403,26 +403,26 @@ void SetCwd(char *destination);
 bool Mkdir(String path); // NOTE: Mkdir if not exist
 StringVector ListDir(Arena *arena, String path);
 
-typedef enum { FILE_GET_ATTRIBUTES_FAILED = 100, FILE_STATS_FILE_NOT_EXIST } FileStatsError;
+typedef enum { FILE_STATS_SUCCESS = 0, FILE_GET_ATTRIBUTES_FAILED = 100, FILE_STATS_FILE_NOT_EXIST } FileStatsError;
 WARN_UNUSED FileStatsError FileStats(String path, File *file);
 
-typedef enum { FILE_NOT_EXIST = 200, FILE_OPEN_FAILED, FILE_GET_SIZE_FAILED, FILE_READ_FAILED } FileReadError;
+typedef enum { FILE_READ_SUCCESS = 0, FILE_NOT_EXIST = 200, FILE_OPEN_FAILED, FILE_GET_SIZE_FAILED, FILE_READ_FAILED } FileReadError;
 WARN_UNUSED FileReadError FileRead(Arena *arena, String path, String *result);
 
-typedef enum { FILE_WRITE_OPEN_FAILED = 300, FILE_WRITE_ACCESS_DENIED, FILE_WRITE_NO_MEMORY, FILE_WRITE_NOT_FOUND, FILE_WRITE_DISK_FULL, FILE_WRITE_IO_ERROR } FileWriteError;
+typedef enum { FILE_WRITE_SUCCESS = 0, FILE_WRITE_OPEN_FAILED = 300, FILE_WRITE_ACCESS_DENIED, FILE_WRITE_NO_MEMORY, FILE_WRITE_NOT_FOUND, FILE_WRITE_DISK_FULL, FILE_WRITE_IO_ERROR } FileWriteError;
 WARN_UNUSED FileWriteError FileWrite(String path, String data);
+
+typedef enum { FILE_ADD_SUCCESS = 0, FILE_ADD_OPEN_FAILED = 400, FILE_ADD_ACCESS_DENIED, FILE_ADD_NO_MEMORY, FILE_ADD_NOT_FOUND, FILE_ADD_DISK_FULL, FILE_ADD_IO_ERROR } FileAddError;
+WARN_UNUSED FileAddError FileAdd(String path, String data); // NOTE: Adds `\n` at the end always
+
+typedef enum { FILE_DELETE_SUCCESS = 0, FILE_DELETE_ACCESS_DENIED = 500, FILE_DELETE_NOT_FOUND, FILE_DELETE_IO_ERROR } FileDeleteError;
+WARN_UNUSED FileDeleteError FileDelete(String path);
+
+typedef enum { FILE_RENAME_SUCCESS = 0, FILE_RENAME_ACCESS_DENIED = 600, FILE_RENAME_NOT_FOUND, FILE_RENAME_IO_ERROR } FileRenameError;
+WARN_UNUSED FileRenameError FileRename(String oldPath, String newPath);
 
 // NOTE: Same error enum since it uses `FileWrite("")` under the hood
 WARN_UNUSED FileWriteError FileReset(String path);
-
-typedef enum { FILE_ADD_OPEN_FAILED = 400, FILE_ADD_ACCESS_DENIED, FILE_ADD_NO_MEMORY, FILE_ADD_NOT_FOUND, FILE_ADD_DISK_FULL, FILE_ADD_IO_ERROR } FileAddError;
-WARN_UNUSED FileAddError FileAdd(String path, String data); // NOTE: Adds `\n` at the end always
-
-typedef enum { FILE_DELETE_ACCESS_DENIED = 500, FILE_DELETE_NOT_FOUND, FILE_DELETE_IO_ERROR } FileDeleteError;
-WARN_UNUSED FileDeleteError FileDelete(String path);
-
-typedef enum { FILE_RENAME_ACCESS_DENIED = 600, FILE_RENAME_NOT_FOUND, FILE_RENAME_IO_ERROR } FileRenameError;
-WARN_UNUSED FileRenameError FileRename(String oldPath, String newPath);
 
 /* --- Logger --- */
 #define _RESET "\x1b[0m"
@@ -1509,7 +1509,7 @@ void SetCwd(char *destination) {
   GetCwd();
 }
 
-errno_t FileStats(String path, File *result) {
+FileStatsError FileStats(String path, File *result) {
   if (GetFileAttributesA(path.data) == INVALID_FILE_ATTRIBUTES) {
     DWORD error = GetLastError();
     if (error == ERROR_FILE_NOT_FOUND || error == ERROR_PATH_NOT_FOUND) {
@@ -1557,10 +1557,10 @@ errno_t FileStats(String path, File *result) {
   result->createTime = createTime.QuadPart / WINDOWS_TICK - SEC_TO_UNIX_EPOCH;
   result->modifyTime = modifyTime.QuadPart / WINDOWS_TICK - SEC_TO_UNIX_EPOCH;
 
-  return SUCCESS;
+  return FILE_STATS_SUCCESS;
 }
 
-errno_t FileRead(Arena *arena, String path, String *result) {
+FileReadError FileRead(Arena *arena, String path, String *result) {
   HANDLE hFile = INVALID_HANDLE_VALUE;
 
   hFile = CreateFileA(path.data, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
@@ -1591,10 +1591,10 @@ errno_t FileRead(Arena *arena, String path, String *result) {
   *result = (String){.length = bytesRead, .data = buffer};
 
   CloseHandle(hFile);
-  return SUCCESS;
+  return FILE_READ_SUCCESS;
 }
 
-errno_t FileWrite(String path, String data) {
+FileWriteError FileWrite(String path, String data) {
   HANDLE hFile = INVALID_HANDLE_VALUE;
 
   hFile = CreateFileA(path.data, GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
@@ -1627,10 +1627,10 @@ errno_t FileWrite(String path, String data) {
 
   CloseHandle(hFile);
 
-  return SUCCESS;
+  return FILE_WRITE_SUCCESS;
 }
 
-errno_t FileAdd(String path, String data) {
+FileAddError FileAdd(String path, String data) {
   HANDLE hFile = INVALID_HANDLE_VALUE;
   hFile = CreateFileA(path.data, GENERIC_WRITE, 0, NULL, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
   if (hFile == INVALID_HANDLE_VALUE) {
@@ -1670,10 +1670,10 @@ errno_t FileAdd(String path, String data) {
 
   CloseHandle(hFile);
   Free(newData);
-  return SUCCESS;
+  return FILE_ADD_SUCCESS;
 }
 
-errno_t FileDelete(String path) {
+FileDeleteError FileDelete(String path) {
   if (!DeleteFileA(path.data)) {
     DWORD error = GetLastError();
     switch (error) {
@@ -1686,10 +1686,10 @@ errno_t FileDelete(String path) {
     }
   }
 
-  return SUCCESS;
+  return FILE_DELETE_SUCCESS;
 }
 
-errno_t FileRename(String oldPath, String newPath) {
+FileRenameError FileRename(String oldPath, String newPath) {
   if (!MoveFileEx(oldPath.data, newPath.data, MOVEFILE_REPLACE_EXISTING)) {
     DWORD error = GetLastError();
     switch (error) {
@@ -1702,7 +1702,7 @@ errno_t FileRename(String oldPath, String newPath) {
     }
   }
 
-  return SUCCESS;
+  return FILE_RENAME_SUCCESS;
 }
 
 bool Mkdir(String path) {
@@ -1770,7 +1770,7 @@ void SetCwd(char *destination) {
   GetCwd();
 }
 
-errno_t FileStats(String path, File *result) {
+FileStatsError FileStats(String path, File *result) {
   struct stat fileStat;
   if (stat(path.data, &fileStat) != 0) {
     if (errno == ENOENT) {
@@ -1798,10 +1798,10 @@ errno_t FileStats(String path, File *result) {
   result->createTime = fileStat.st_ctime; // Creation time (may be change time on some Unix systems)
   result->modifyTime = fileStat.st_mtime; // Modification time
 
-  return SUCCESS;
+  return FILE_STATS_SUCCESS;
 }
 
-errno_t FileRead(Arena *arena, String path, String *result) {
+FileReadError FileRead(Arena *arena, String path, String *result) {
   FILE *file = fopen(path.data, "r");
   if (!file) {
     int error = errno;
@@ -1833,10 +1833,10 @@ errno_t FileRead(Arena *arena, String path, String *result) {
 
   *result = (String){.length = bytesRead, .data = buffer};
   fclose(file);
-  return SUCCESS;
+  return FILE_READ_SUCCESS;
 }
 
-errno_t FileWrite(String path, String data) {
+FileWriteError FileWrite(String path, String data) {
   i32 fd = -1;
 
   fd = open(path.data, O_WRONLY | O_CREAT | O_TRUNC, 0644);
@@ -1868,10 +1868,10 @@ errno_t FileWrite(String path, String data) {
 
   close(fd);
 
-  return SUCCESS;
+  return FILE_WRITE_SUCCESS;
 }
 
-errno_t FileAdd(String path, String data) {
+FileAddError FileAdd(String path, String data) {
   i32 fd = -1;
 
   fd = open(path.data, O_WRONLY | O_APPEND | O_CREAT, 0644);
@@ -1909,10 +1909,10 @@ errno_t FileAdd(String path, String data) {
 
   close(fd);
   Free(newData);
-  return SUCCESS;
+  return FILE_ADD_SUCCESS;
 }
 
-errno_t FileDelete(String path) {
+FileDeleteError FileDelete(String path) {
   if (unlink(path.data) != 0) {
     int error = errno;
 
@@ -1926,10 +1926,10 @@ errno_t FileDelete(String path) {
     }
   }
 
-  return SUCCESS;
+  return FILE_DELETE_SUCCESS;
 }
 
-errno_t FileRename(String oldPath, String newPath) {
+FileRenameError FileRename(String oldPath, String newPath) {
   if (rename(oldPath.data, newPath.data) != 0) {
     errno_t error = errno;
 
@@ -1943,7 +1943,7 @@ errno_t FileRename(String oldPath, String newPath) {
     }
   }
 
-  return SUCCESS;
+  return FILE_RENAME_SUCCESS;
 }
 
 bool Mkdir(String path) {
@@ -1994,7 +1994,7 @@ StringVector ListDir(Arena *arena, String path) {
 }
 #  endif
 
-errno_t FileReset(String path) {
+FileWriteError FileReset(String path) {
   return FileWrite(path, S(""));
 }
 
