@@ -60,9 +60,6 @@ extern "C" {
 #    define PLATFORM_ANDROID
 #  elif defined(__linux__) || defined(__gnu_linux__)
 #    define PLATFORM_LINUX
-#    if defined(USE_DRM) || defined(HAVE_DRM)
-#      define PLATFORM_DRM
-#    endif
 #  elif defined(__APPLE__) || defined(__MACH__)
 #    define PLATFORM_MACOS
 #  elif defined(__EMSCRIPTEN__)
