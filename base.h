@@ -118,6 +118,7 @@ extern "C" {
 #endif
 
 #include <ctype.h>
+#include <inttypes.h>
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stddef.h>
@@ -207,6 +208,16 @@ typedef struct {
   size_t length; // Does not include null terminator
   char *data;
 } String;
+
+#define FMT_I8 "%" PRIi8
+#define FMT_I16 "%" PRIi16
+#define FMT_I32 "%" PRIi32
+#define FMT_I64 "%" PRIi64
+
+#define FMT_U8 "%" PRIu8
+#define FMT_U16 "%" PRIu16
+#define FMT_U32 "%" PRIu32
+#define FMT_U64 "%" PRIu64
 
 // Maximum values for integer types
 #define U8_MAX UINT8_MAX
