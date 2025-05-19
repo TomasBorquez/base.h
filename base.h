@@ -252,21 +252,21 @@ void _custom_assert(const char *expr, const char *file, unsigned line, const cha
     vector.data = Malloc(count * sizeof(*vector.data)); \
   } while (0)
 
-#define VecPush(vector, value) vecPush((void **)&(vector).data, &(vector).length, &(vector).capacity, sizeof(*vector.data), &(value));
+#define VecPush(vector, value) __base_vec_push((void **)&(vector).data, &(vector).length, &(vector).capacity, sizeof(*vector.data), &(value));
 
-#define VecPop(vector) vecPop((vector).data, &(vector).length, sizeof(*vector.data));
+#define VecPop(vector) __base_vec_pop((vector).data, &(vector).length, sizeof(*vector.data));
 
-#define VecShift(vector) vecShift((void **)&(vector).data, &(vector).length, sizeof(*vector.data))
+#define VecShift(vector) __base_vec_shift((void **)&(vector).data, &(vector).length, sizeof(*vector.data))
 
-#define VecUnshift(vector, value) vecUnshift((void **)&(vector).data, &(vector).length, &(vector).capacity, sizeof(*vector.data), &(value))
+#define VecUnshift(vector, value) __base_vec_unshift((void **)&(vector).data, &(vector).length, &(vector).capacity, sizeof(*vector.data), &(value))
 
-#define VecInsert(vector, value, index) vecInsert((void **)&(vector).data, &(vector).length, &(vector).capacity, sizeof(*vector.data), &(value), index)
+#define VecInsert(vector, value, index) __base_vec_insert((void **)&(vector).data, &(vector).length, &(vector).capacity, sizeof(*vector.data), &(value), index)
 
-#define VecAt(vector, index) (*(__typeof__(*vector.data) *)vecAt((void **)&(vector).data, &(vector).length, index, sizeof(*vector.data)))
+#define VecAt(vector, index) (*(__typeof__(*vector.data) *)__base_vec_at((void **)&(vector).data, &(vector).length, index, sizeof(*vector.data)))
 
-#define VecAtPtr(vector, index) (vecAt((void **)&(vector).data, &(vector).length, index, sizeof(*vector.data)))
+#define VecAtPtr(vector, index) (__base_vec_at((void **)&(vector).data, &(vector).length, index, sizeof(*vector.data)))
 
-#define VecFree(vector) vecFree((void **)&(vector).data, &(vector).length, &(vector).capacity)
+#define VecFree(vector) __base_vec_free((void **)&(vector).data, &(vector).length, &(vector).capacity)
 
 #define VecForEach(vector, it) for (__typeof__(*vector.data) *it = vector.data; it < vector.data + vector.length; it++)
 
@@ -518,7 +518,7 @@ bool IniGetBool(IniFile *ini, String key);
 */
 #if defined(BASE_IMPLEMENTATION)
 // --- Vector Implementation ---
-static void vecPush(void **data, size_t *length, size_t *capacity, size_t element_size, void *value) {
+void __base_vec_push(void **data, size_t *length, size_t *capacity, size_t element_size, void *value) {
   // WARNING: Vector must always be initialized to zero `Vector vector = {0}`
   Assert(*length <= *capacity, "VecPush: Possible memory corruption or vector not initialized, `Vector vector = {0}`");
   Assert(!(*length > 0 && *data == NULL), "VecPush: Possible memory corruption, data should be NULL only if length == 0");
@@ -536,19 +536,19 @@ static void vecPush(void **data, size_t *length, size_t *capacity, size_t elemen
   (*length)++;
 }
 
-static void *vecPop(void *data, size_t *length, size_t element_size) {
+void *__base_vec_pop(void *data, size_t *length, size_t element_size) {
   Assert(*length > 0, "VecPop: Cannot pop from empty vector");
   (*length)--;
   return (char *)data + (*length * element_size);
 }
 
-static void vecShift(void **data, size_t *length, size_t element_size) {
+void __base_vec_shift(void **data, size_t *length, size_t element_size) {
   Assert(*length != 0, "VecShift: Length should at least be >= 1");
   memmove(*data, (char *)(*data) + element_size, ((*length) - 1) * element_size);
   (*length)--;
 }
 
-static void vecUnshift(void **data, size_t *length, size_t *capacity, size_t element_size, const void *value) {
+void __base_vec_unshift(void **data, size_t *length, size_t *capacity, size_t element_size, const void *value) {
   if (*length >= *capacity) {
     if (*capacity == 0) *capacity = 2;
     else *capacity *= 2;
@@ -563,7 +563,7 @@ static void vecUnshift(void **data, size_t *length, size_t *capacity, size_t ele
   (*length)++;
 }
 
-static void vecInsert(void **data, size_t *length, size_t *capacity, size_t element_size, void *value, size_t index) {
+void __base_vec_insert(void **data, size_t *length, size_t *capacity, size_t element_size, void *value, size_t index) {
   Assert(index <= *length, "VecInsert: Index out of bounds for insertion");
 
   if (*length >= *capacity) {
@@ -580,13 +580,13 @@ static void vecInsert(void **data, size_t *length, size_t *capacity, size_t elem
   (*length)++;
 }
 
-static void *vecAt(void **data, size_t *length, size_t index, size_t elementSize) {
+void *__base_vec_at(void **data, size_t *length, size_t index, size_t elementSize) {
   Assert(index >= 0 && index < *length, "VecAt: Index out of bounds");
   void *address = (char *)(*data) + (index * elementSize);
   return address;
 }
 
-static void vecFree(void **data, size_t *length, size_t *capacity) {
+void __base_vec_free(void **data, size_t *length, size_t *capacity) {
   free(*data);
   *data = NULL;
   *length = 0;

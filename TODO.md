@@ -34,6 +34,7 @@
     - [x] add `isAndroid()`
     - [x] add `isMacOs()`
     - [x] add `isEmscripten()`
+- [x] Move private functions to `__base_` and snake_case
 - [ ] Static `MAX_PATH` is fragile:
     - [ ] https://eklitzke.org/path-max-is-tricky (GNU extension `char *get_current_dir_name()` dynamic length)
     - [ ] `wide paths` UTF16 on windows
