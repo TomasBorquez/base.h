@@ -1,7 +1,7 @@
 /* MIT License
 
   base.h - Better cross-platform STD
-  Version - 2025-05-19 (0.1.20):
+  Version - 2025-05-19 (0.2.0):
   https://github.com/TomasBorquez/base.h
 
   Usage:
@@ -11,10 +11,6 @@
   More on the the `README.md`
 */
 #pragma once
-
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 /* --- Platform MACROS and includes --- */
 #if defined(__clang__)
@@ -87,6 +83,10 @@ extern "C" {
 #  include <sys/stat.h>
 #  include <sys/types.h>
 #  include <unistd.h>
+#endif
+
+#ifdef __cplusplus
+extern "C" {
 #endif
 
 #if defined(__STDC_VERSION__)
@@ -282,22 +282,22 @@ void _custom_assert(const char *expr, const char *file, unsigned line, const cha
 #define VecForEach(vector, it) for (__typeof__(*vector.data) *it = vector.data; it < vector.data + vector.length; it++)
 
 /* --- Time and Platforms --- */
-i64 TimeNow();
+i64 TimeNow(void);
 void WaitTime(i64 ms);
 
-bool isLinux();
-bool isMacOs();
-bool isWindows();
-bool isUnix();
-bool isAndroid();
-bool isEmscripten();
-bool isLinuxDRM();
+bool isLinux(void);
+bool isMacOs(void);
+bool isWindows(void);
+bool isUnix(void);
+bool isAndroid(void);
+bool isEmscripten(void);
+bool isLinuxDRM(void);
 
 typedef enum { WINDOWS = 1, LINUX, MACOS } Platform;
-Platform GetPlatform();
+Platform GetPlatform(void);
 
 typedef enum { GCC = 1, CLANG, TCC, MSVC } Compiler;
-Compiler GetCompiler();
+Compiler GetCompiler(void);
 
 /* --- Error --- */
 typedef i32 errno_t;
@@ -342,20 +342,20 @@ void Free(void *address);
 #define ENSURE_STRING_LITERAL(x) ("" x "")
 
 // NOTE: If an error led you here, it's because `S` can only be used with string literals, i.e. `S("SomeString")` and not `S(yourString)` - for that use `s()`
-#define S(string) (TYPE_INIT(String){.length = STRING_LENGTH(ENSURE_STRING_LITERAL(string)), .data = (string)})
+#define S(string) (TYPE_INIT(String){.length = STRING_LENGTH(ENSURE_STRING_LITERAL(string)), .data = (char *)(uintptr_t)(string)})
 String s(char *msg);
 
 String F(Arena *arena, const char *format, ...) FORMAT_CHECK(2, 3);
 
 VEC_TYPE(StringVector, String);
-#define StringVectorPushMany(vector, ...)           \
-  do {                                              \
-    char *values[] = {__VA_ARGS__};                 \
-    size_t count = sizeof(values) / sizeof(char *); \
-    for (size_t i = 0; i < count; i++) {            \
-      String value = s(values[i]);                  \
-      VecPush(vector, value);                       \
-    }                                               \
+#define StringVectorPushMany(vector, ...)              \
+  do {                                                 \
+    char *values[] = {__VA_ARGS__};                    \
+    size_t count = sizeof(values) / sizeof(values[0]); \
+    for (size_t i = 0; i < count; i++) {               \
+      String value = s(values[i]);                     \
+      VecPush(vector, value);                          \
+    }                                                  \
   } while (0)
 
 void SetMaxStrSize(size_t size);
@@ -393,8 +393,8 @@ StringBuilder StringBuilderReserve(Arena *arena, size_t capacity);
 void StringBuilderAppend(Arena *arena, StringBuilder *builder, String *string);
 
 /* --- Random --- */
-void RandomInit();
-u64 RandomGetSeed();
+void RandomInit(void);
+u64 RandomGetSeed(void);
 void RandomSetSeed(u64 newSeed);
 i32 RandomInteger(i32 min, i32 max);
 f32 RandomFloat(f32 min, f32 max);
@@ -410,7 +410,7 @@ typedef struct {
   i64 modifyTime;
 } File;
 
-char *GetCwd();
+char *GetCwd(void);
 void SetCwd(char *destination);
 bool Mkdir(String path); // NOTE: Mkdir if not exist
 StringVector ListDir(Arena *arena, String path);
@@ -443,10 +443,11 @@ WARN_UNUSED FileWriteError FileReset(String path);
 #define _GREEN "\x1b[0;32m"
 #define _ORANGE "\x1b[0;33m"
 
-void LogInit();
+void LogInit(void);
 void LogInfo(const char *format, ...) FORMAT_CHECK(1, 2);
 void LogWarn(const char *format, ...) FORMAT_CHECK(1, 2);
 void LogError(const char *format, ...) FORMAT_CHECK(1, 2);
+static void logErrorV(const char *format, va_list args) FORMAT_CHECK(1, 0);
 void LogSuccess(const char *format, ...) FORMAT_CHECK(1, 2);
 
 /* --- Math --- */
@@ -523,13 +524,17 @@ i64 IniGetLong(IniFile *ini, String key);
 f64 IniGetDouble(IniFile *ini, String key);
 bool IniGetBool(IniFile *ini, String key);
 
+#ifdef __cplusplus
+}
+#endif
+
 /* MIT License
    base.h - Implementation of base.h
    https://github.com/TomasBorquez/base.h
 */
 #if defined(BASE_IMPLEMENTATION)
 // --- Vector Implementation ---
-void __base_vec_push(void **data, size_t *length, size_t *capacity, size_t element_size, void *value) {
+static void __base_vec_push(void **data, size_t *length, size_t *capacity, size_t element_size, void *value) {
   // WARNING: Vector must always be initialized to zero `Vector vector = {0}`
   Assert(*length <= *capacity, "VecPush: Possible memory corruption or vector not initialized, `Vector vector = {0}`");
   Assert(!(*length > 0 && *data == NULL), "VecPush: Possible memory corruption, data should be NULL only if length == 0");
@@ -547,19 +552,19 @@ void __base_vec_push(void **data, size_t *length, size_t *capacity, size_t eleme
   (*length)++;
 }
 
-void *__base_vec_pop(void *data, size_t *length, size_t element_size) {
+static void *__base_vec_pop(void *data, size_t *length, size_t element_size) {
   Assert(*length > 0, "VecPop: Cannot pop from empty vector");
   (*length)--;
   return (char *)data + (*length * element_size);
 }
 
-void __base_vec_shift(void **data, size_t *length, size_t element_size) {
+static void __base_vec_shift(void **data, size_t *length, size_t element_size) {
   Assert(*length != 0, "VecShift: Length should at least be >= 1");
   memmove(*data, (char *)(*data) + element_size, ((*length) - 1) * element_size);
   (*length)--;
 }
 
-void __base_vec_unshift(void **data, size_t *length, size_t *capacity, size_t element_size, const void *value) {
+static void __base_vec_unshift(void **data, size_t *length, size_t *capacity, size_t element_size, const void *value) {
   if (*length >= *capacity) {
     if (*capacity == 0) *capacity = 2;
     else *capacity *= 2;
@@ -574,7 +579,7 @@ void __base_vec_unshift(void **data, size_t *length, size_t *capacity, size_t el
   (*length)++;
 }
 
-void __base_vec_insert(void **data, size_t *length, size_t *capacity, size_t element_size, void *value, size_t index) {
+static void __base_vec_insert(void **data, size_t *length, size_t *capacity, size_t element_size, void *value, size_t index) {
   Assert(index <= *length, "VecInsert: Index out of bounds for insertion");
 
   if (*length >= *capacity) {
@@ -591,13 +596,13 @@ void __base_vec_insert(void **data, size_t *length, size_t *capacity, size_t ele
   (*length)++;
 }
 
-void *__base_vec_at(void **data, size_t *length, size_t index, size_t elementSize) {
+static void *__base_vec_at(void **data, size_t *length, size_t index, size_t elementSize) {
   Assert(index >= 0 && index < *length, "VecAt: Index out of bounds");
   void *address = (char *)(*data) + (index * elementSize);
   return address;
 }
 
-void __base_vec_free(void **data, size_t *length, size_t *capacity) {
+static void __base_vec_free(void **data, size_t *length, size_t *capacity) {
   free(*data);
   *data = NULL;
   *length = 0;
@@ -665,7 +670,7 @@ WARN_UNUSED errno_t fopen_s(FILE **streamptr, const char *filename, const char *
 }
 #  endif
 
-bool isLinux() {
+bool isLinux(void) {
 #  if defined(PLATFORM_LINUX)
   return true;
 #  else
@@ -673,7 +678,7 @@ bool isLinux() {
 #  endif
 }
 
-bool isMacOs() {
+bool isMacOs(void) {
 #  if defined(PLATFORM_MACOS)
   return true;
 #  else
@@ -681,7 +686,7 @@ bool isMacOs() {
 #  endif
 }
 
-bool isWindows() {
+bool isWindows(void) {
 #  if defined(PLATFORM_WIN)
   return true;
 #  else
@@ -689,7 +694,7 @@ bool isWindows() {
 #  endif
 }
 
-bool isUnix() {
+bool isUnix(void) {
 #  if defined(PLATFORM_UNIX)
   return true;
 #  else
@@ -697,7 +702,7 @@ bool isUnix() {
 #  endif
 }
 
-bool isAndroid() {
+bool isAndroid(void) {
 #  if defined(PLATFORM_EMSCRIPTEN)
   return true;
 #  else
@@ -705,7 +710,7 @@ bool isAndroid() {
 #  endif
 }
 
-bool isEmscripten() {
+bool isEmscripten(void) {
 #  if defined(PLATFORM_EMSCRIPTEN)
   return true;
 #  else
@@ -713,7 +718,7 @@ bool isEmscripten() {
 #  endif
 }
 
-bool isLinuxDRM() {
+bool isLinuxDRM(void) {
 #  if defined(PLATFORM_DRM)
   return true;
 #  else
@@ -721,7 +726,7 @@ bool isLinuxDRM() {
 #  endif
 }
 
-Compiler GetCompiler() {
+Compiler GetCompiler(void) {
 #  if defined(COMPILER_CLANG)
   return CLANG;
 #  elif defined(COMPILER_GCC)
@@ -733,7 +738,7 @@ Compiler GetCompiler() {
 #  endif
 }
 
-Platform GetPlatform() {
+Platform GetPlatform(void) {
 #  if defined(PLATFORM_WIN)
   return WINDOWS;
 #  elif defined(PLATFORM_LINUX)
@@ -743,7 +748,7 @@ Platform GetPlatform() {
 #  endif
 }
 
-i64 TimeNow() {
+i64 TimeNow(void) {
 #  if defined(PLATFORM_WIN)
   FILETIME ft;
   GetSystemTimeAsFileTime(&ft);
@@ -870,7 +875,7 @@ void _custom_assert(const char *expr, const char *file, unsigned line, const cha
   if (format) {
     va_list args;
     va_start(args, format);
-    LogError(format, args);
+    logErrorV(format, args);
     va_start(args, format);
   }
 
@@ -879,7 +884,7 @@ void _custom_assert(const char *expr, const char *file, unsigned line, const cha
 
 /* --- Arena Implementation --- */
 // Allocate or iterate to next chunk that can fit `bytes`
-void __ArenaNextChunk(Arena *arena, size_t bytes) {
+static void __ArenaNextChunk(Arena *arena, size_t bytes) {
   __ArenaChunk *next = arena->current ? arena->current->next : NULL;
   while (next) {
     arena->current = next;
@@ -1191,7 +1196,7 @@ void StrToLower(String str) {
   }
 }
 
-bool isSpace(char character) {
+static bool isSpace(char character) {
   return character == ' ' || character == '\n' || character == '\t' || character == '\r';
 }
 
@@ -1267,7 +1272,7 @@ String F(Arena *arena, const char *format, ...) {
   return (String){.length = size - 1, .data = buffer};
 }
 
-String normSlashes(String path) {
+static String normSlashes(String path) {
 #  if defined(PLATFORM_WIN)
   for (size_t i = 0; i < path.length; i++) {
     if (path.data[i] == '/') {
@@ -1475,7 +1480,7 @@ void StringBuilderAppend(Arena *arena, StringBuilder *builder, String *string) {
 /* Random Implemenation */
 static u64 seed = 0;
 
-u64 RandomGetSeed() {
+u64 RandomGetSeed(void) {
   return seed;
 }
 
@@ -1505,13 +1510,13 @@ i32 RandomInteger(i32 min, i32 max) {
 
 f32 RandomFloat(f32 min, f32 max) {
   Assert(min <= max, "RandomFloat: min must be less than or equal to max");
-  f32 normalized = (f32)rand() / (f32)RAND_MAX;
+  f32 normalized = rand() / (f32)RAND_MAX;
   return min + normalized * (max - min);
 }
 
 /* File System Implementation */
 #  if defined(PLATFORM_WIN)
-char *GetCwd() {
+char *GetCwd(void) {
   static char currentPath[MAX_PATH];
   DWORD length = GetCurrentDirectory(MAX_PATH, currentPath);
   if (length == 0) {
@@ -2037,6 +2042,12 @@ void LogWarn(const char *format, ...) {
   printf("%s\n", _RESET);
 }
 
+static void logErrorV(const char *format, va_list args) {
+  printf("%s[ERROR]: ", _RED);
+  vprintf(format, args);
+  printf("%s\n", _RESET);
+}
+
 void LogError(const char *format, ...) {
   printf("%s[ERROR]: ", _RED);
   va_list args;
@@ -2055,7 +2066,7 @@ void LogSuccess(const char *format, ...) {
   printf("%s\n", _RESET);
 }
 
-void LogInit() {
+void LogInit(void) {
 #  if defined(PLATFORM_WIN)
   HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
   DWORD dwMode = 0;
@@ -2071,8 +2082,8 @@ errno_t IniParse(String path, IniFile *result) {
   FileStatsError err = FileStats(path, &stats);
   if (err == FILE_STATS_FILE_NOT_EXIST) {
     LogWarn("IniParse: %s does not exist, creating...", path.data);
-    FileWriteError err = FileReset(path);
-    Assert(err == FILE_WRITE_SUCCESS, "IniParse: Failed creating file for path %s, err: %d", path.data, err);
+    FileWriteError errWrite = FileReset(path);
+    Assert(errWrite == FILE_WRITE_SUCCESS, "IniParse: Failed creating file for path %s, err: %d", path.data, err);
 
     result->arena = ArenaCreate(sizeof(String) * 10); // Initialize arena
     return SUCCESS;
@@ -2126,8 +2137,8 @@ errno_t IniWrite(String path, IniFile *iniFile) {
 
   VecForEach(iniFile->data, entry) {
     String value = F(iniFile->arena, "%s=%s", entry->key.data, entry->value.data);
-    FileAddError err = FileAdd(path, value);
-    if (err != FILE_ADD_SUCCESS) {
+    FileAddError errAdd = FileAdd(path, value);
+    if (errAdd != FILE_ADD_SUCCESS) {
       return err;
     }
   }
@@ -2221,9 +2232,5 @@ bool IniGetBool(IniFile *ini, String key) {
   }
 
   return StrEq(value, S("true"));
-}
-#endif
-
-#ifdef __cplusplus
 }
 #endif
