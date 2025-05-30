@@ -1,6 +1,6 @@
 #include "test.c"
 
-void TestStringCreation() {
+static void TestStringCreation(void) {
   TEST_BEGIN("String Creation");
   {
     String str1 = S("Hello");
@@ -18,7 +18,7 @@ void TestStringCreation() {
   TEST_END();
 }
 
-void TestStringComparison() {
+static void TestStringComparison(void) {
   TEST_BEGIN("String Comparison");
   {
     String str1 = S("Hello");
@@ -35,7 +35,7 @@ void TestStringComparison() {
   TEST_END();
 }
 
-void TestStringManipulation() {
+static void TestStringManipulation(void) {
   TEST_BEGIN("String Manipulation");
   {
     Arena *arena = ArenaCreate(128);
@@ -67,7 +67,7 @@ void TestStringManipulation() {
   TEST_END();
 }
 
-void TestStringSplitting() {
+static void TestStringSplitting(void) {
   TEST_BEGIN("String Splitting");
   {
     Arena *arena = ArenaCreate(128);
@@ -94,7 +94,7 @@ void TestStringSplitting() {
   TEST_END();
 }
 
-void TestStringBuilderFunctionality() {
+static void TestStringBuilderFunctionality(void) {
   TEST_BEGIN("StringBuilder Functionality");
   {
     Arena *arena = ArenaCreate(128);
@@ -122,7 +122,7 @@ void TestStringBuilderFunctionality() {
   TEST_END();
 }
 
-void TestStringSlicing() {
+static void TestStringSlicing(void) {
   TEST_BEGIN("String Slicing");
   {
     Arena *arena = ArenaCreate(128);
@@ -150,7 +150,7 @@ void TestStringSlicing() {
   TEST_END();
 }
 
-void TestPathNormalization() {
+static void TestPathNormalization(void) {
   TEST_BEGIN("Path Normalization");
   {
     Arena *arena = ArenaCreate(128);
@@ -320,7 +320,7 @@ void TestPathNormalization() {
   TEST_END();
 }
 
-void TestStringVectorFunctionality() {
+static void TestStringVectorFunctionality(void) {
   TEST_BEGIN("StringVector Functionality");
   {
     StringVector vector = {0};
@@ -334,7 +334,7 @@ void TestStringVectorFunctionality() {
   TEST_END();
 }
 
-void TestStringEdgeCases() {
+static void TestStringEdgeCases(void) {
   TEST_BEGIN("String Edge Cases");
   {
     Arena *arena = ArenaCreate(128);
@@ -356,7 +356,7 @@ void TestStringEdgeCases() {
   TEST_END();
 }
 
-i32 main() {
+i32 main(void) {
   StartTest();
   {
     TestStringCreation();

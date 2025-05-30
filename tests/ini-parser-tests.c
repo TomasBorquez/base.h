@@ -2,7 +2,7 @@
 
 #include "test.c"
 
-static void TestIniParseBasic() {
+static void TestIniParseBasic(void) {
   TEST_BEGIN("Ini Parse Basic");
   {
     String testPath = S("./resources/test-config.ini");
@@ -15,7 +15,7 @@ static void TestIniParseBasic() {
   TEST_END();
 }
 
-static void TestIniGetString() {
+static void TestIniGetString(void) {
   TEST_BEGIN("Ini Get String Values");
   {
     String testPath = S("./resources/test-config.ini");
@@ -40,7 +40,7 @@ static void TestIniGetString() {
   TEST_END();
 }
 
-static void TestIniGetTypedValues() {
+static void TestIniGetTypedValues(void) {
   TEST_BEGIN("Ini Get Typed Values");
   {
     String testPath = S("./resources/test-config.ini");
@@ -67,7 +67,7 @@ static void TestIniGetTypedValues() {
   TEST_END();
 }
 
-static void TestIniNonExistentKey() {
+static void TestIniNonExistentKey(void) {
   TEST_BEGIN("Ini Non-Existent Key");
   {
     String testPath = S("./resources/test-config.ini");
@@ -84,7 +84,7 @@ static void TestIniNonExistentKey() {
   TEST_END();
 }
 
-static void TestIniSetValues() {
+static void TestIniSetValues(void) {
   TEST_BEGIN("Ini Set Values");
   {
     String testPath = S("./resources/test-config.ini");
@@ -113,7 +113,7 @@ static void TestIniSetValues() {
   TEST_END();
 }
 
-static void TestIniWriteAndRead() {
+static void TestIniWriteAndRead(void) {
   TEST_BEGIN("Ini Write and Read");
   {
     String testPath = S("./resources/test-config.ini");
@@ -149,7 +149,7 @@ static void TestIniWriteAndRead() {
   TEST_END();
 }
 
-static void TestIniSpecialCases() {
+static void TestIniSpecialCases(void) {
   TEST_BEGIN("Ini Special Cases");
   {
     String emptyFilePath = S("./resources/empty.ini");
@@ -177,7 +177,7 @@ static void TestIniSpecialCases() {
   TEST_END();
 }
 
-i32 main() {
+i32 main(void) {
   StartTest();
   {
     TestIniParseBasic();

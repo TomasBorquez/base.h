@@ -20,11 +20,11 @@ static size_t totalTestsFailed = 0;
     LogError("assert failed %s", msg); \
   }
 
-void StartTest() {
+void StartTest(void) {
   LogInfo("========== Running tests ==========");
 }
 
-void EndTest() {
+void EndTest(void) {
   LogInfo("========== Tests complete ==========");
   LogInfo("Total tests run: %zu", totalTestsRun);
   if (totalTestsFailed > 1) {

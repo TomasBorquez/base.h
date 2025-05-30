@@ -1,6 +1,6 @@
 #include "test.c"
 
-void TestFileOperations() {
+static void TestFileOperations(void) {
   TEST_BEGIN("FileOperations");
   {
     bool mkdirResult = Mkdir(S("file-system-dir"));
@@ -77,7 +77,7 @@ void TestFileOperations() {
   TEST_END();
 }
 
-void TestFileErrorCases() {
+static void TestFileErrorCases(void) {
   TEST_BEGIN("FileErrorCases");
   {
     Arena *arena = ArenaCreate(1024);
@@ -116,7 +116,7 @@ void TestFileErrorCases() {
   TEST_END();
 }
 
-void TestDirectoryOperations() {
+static void TestDirectoryOperations(void) {
   TEST_BEGIN("DirectoryOperations");
   {
     bool mkdirNested = Mkdir(S("nested"));
@@ -147,7 +147,7 @@ void TestDirectoryOperations() {
   TEST_END();
 }
 
-void TestPathHandling() {
+static void TestPathHandling(void) {
   TEST_BEGIN("PathHandling");
   {
     errno_t writeResult = FileWrite(S("./relative-path.txt"), S("Relative path content"));
@@ -171,7 +171,7 @@ void TestPathHandling() {
   TEST_END();
 }
 
-void TestFileSystemEdgeCases() {
+static void TestFileSystemEdgeCases(void) {
   TEST_BEGIN("FileSystemEdgeCases");
   {
     errno_t writeEmpty = FileWrite(S("empty-file.txt"), S(""));
@@ -210,7 +210,7 @@ void TestFileSystemEdgeCases() {
   TEST_END();
 }
 
-i32 main() {
+i32 main(void) {
   StartTest();
   {
     TestFileOperations();

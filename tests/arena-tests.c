@@ -1,6 +1,6 @@
 #include "test.c"
 
-void TestBasicArena() {
+static void TestBasicArena(void) {
   TEST_BEGIN("Basic Arena Test");
   {
     Arena *a = ArenaCreate(1024);
@@ -18,7 +18,7 @@ void TestBasicArena() {
   TEST_END();
 }
 
-void TestArenaChunkExpansion() {
+static void TestArenaChunkExpansion(void) {
   TEST_BEGIN("Arena Chunk Expansion Test");
   {
     Arena *a = ArenaCreate(128);
@@ -38,7 +38,7 @@ void TestArenaChunkExpansion() {
   TEST_END();
 }
 
-void TestArenaAlignedAllocation() {
+static void TestArenaAlignedAllocation(void) {
   TEST_BEGIN("Arena Aligned Allocation Test");
   {
     Arena *a = ArenaCreate(512);
@@ -62,7 +62,7 @@ void TestArenaAlignedAllocation() {
   TEST_END();
 }
 
-void TestArenaReset() {
+static void TestArenaReset(void) {
   TEST_BEGIN("Arena Reset Test");
   {
     Arena *a = ArenaCreate(256);
@@ -86,7 +86,7 @@ void TestArenaReset() {
   TEST_END();
 }
 
-void TestArenaStress() {
+static void TestArenaStress(void) {
   TEST_BEGIN("Arena Stress Test");
   {
     Arena *a = ArenaCreate(1024);
@@ -115,7 +115,7 @@ void TestArenaStress() {
   TEST_END();
 }
 
-void TestZeroSizeAllocations() {
+static void TestZeroSizeAllocations(void) {
   TEST_BEGIN("Zero Size Allocations Test");
   {
     Arena *a = ArenaCreate(256);
@@ -135,7 +135,7 @@ void TestZeroSizeAllocations() {
   TEST_END();
 }
 
-void TestEdgeCaseChunkSizes() {
+static void TestEdgeCaseChunkSizes(void) {
   TEST_BEGIN("Edge Case Chunk Sizes Test");
   {
     Arena *tiny = ArenaCreate(16);
@@ -153,7 +153,7 @@ void TestEdgeCaseChunkSizes() {
   TEST_END();
 }
 
-i32 main() {
+i32 main(void) {
   StartTest();
   {
     TestBasicArena();

@@ -1,6 +1,6 @@
 #include "test.c"
 
-void TestForEach() {
+static void TestForEach(void) {
   TEST_BEGIN("StringVectorForEach");
   {
     StringVector vec = {0};
@@ -29,7 +29,7 @@ void TestForEach() {
   TEST_END();
 }
 
-void TestPushPop() {
+static void TestPushPop(void) {
   TEST_BEGIN("VectorPushPop");
   {
     StringVector vec = {0};
@@ -56,7 +56,7 @@ void TestPushPop() {
   TEST_END();
 }
 
-void TestUnshiftShift() {
+static void TestUnshiftShift(void) {
   TEST_BEGIN("VectorUnshiftShift");
   {
     StringVector vec = {0};
@@ -83,7 +83,7 @@ void TestUnshiftShift() {
   TEST_END();
 }
 
-void TestInsert() {
+static void TestInsert(void) {
   TEST_BEGIN("VectorInsert");
   {
     StringVector vec = {0};
@@ -111,7 +111,7 @@ void TestInsert() {
   TEST_END();
 }
 
-void TestAccess() {
+static void TestAccess(void) {
   TEST_BEGIN("VectorAccess");
   {
     StringVector vec = {0};
@@ -133,7 +133,7 @@ void TestAccess() {
   TEST_END();
 }
 
-void TestCapacity() {
+static void TestCapacity(void) {
   TEST_BEGIN("VectorCapacity");
   {
     StringVector vec = {0};
@@ -159,7 +159,7 @@ void TestCapacity() {
   TEST_END();
 }
 
-i32 main() {
+i32 main(void) {
   StartTest();
   {
     TestForEach();

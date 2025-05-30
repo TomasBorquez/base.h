@@ -1,7 +1,7 @@
 /* MIT License
 
   base.h - Better cross-platform STD
-  Version - 2025-05-29 (0.2.1):
+  Version - 2025-05-30 (0.2.2):
   https://github.com/TomasBorquez/base.h
 
   Usage:
@@ -258,29 +258,29 @@ void _custom_assert(const char *expr, const char *file, unsigned line, const cha
     size_t capacity;                  \
   } typeName
 
-#define VecReserve(vector, count)                       \
-  do {                                                  \
-    vector.capacity = count;                            \
-    vector.data = Malloc(count * sizeof(*vector.data)); \
+#define VecReserve(vector, count)                           \
+  do {                                                      \
+    vector.capacity = (count);                              \
+    vector.data = Malloc((count) * sizeof(*(vector).data)); \
   } while (0)
 
-#define VecPush(vector, value) __base_vec_push((void **)&(vector).data, &(vector).length, &(vector).capacity, sizeof(*vector.data), &(value));
+#define VecPush(vector, value) __base_vec_push((void **)&(vector).data, &(vector).length, &(vector).capacity, sizeof(*(vector).data), &(value));
 
-#define VecPop(vector) __base_vec_pop((vector).data, &(vector).length, sizeof(*vector.data));
+#define VecPop(vector) __base_vec_pop((vector).data, &(vector).length, sizeof(*(vector).data));
 
-#define VecShift(vector) __base_vec_shift((void **)&(vector).data, &(vector).length, sizeof(*vector.data))
+#define VecShift(vector) __base_vec_shift((void **)&(vector).data, &(vector).length, sizeof(*(vector).data))
 
-#define VecUnshift(vector, value) __base_vec_unshift((void **)&(vector).data, &(vector).length, &(vector).capacity, sizeof(*vector.data), &(value))
+#define VecUnshift(vector, value) __base_vec_unshift((void **)&(vector).data, &(vector).length, &(vector).capacity, sizeof(*(vector).data), &(value))
 
-#define VecInsert(vector, value, index) __base_vec_insert((void **)&(vector).data, &(vector).length, &(vector).capacity, sizeof(*vector.data), &(value), index)
+#define VecInsert(vector, value, index) __base_vec_insert((void **)&(vector).data, &(vector).length, &(vector).capacity, sizeof(*(vector).data), &(value), (index))
 
-#define VecAt(vector, index) (*(__typeof__(*vector.data) *)__base_vec_at((void **)&(vector).data, &(vector).length, index, sizeof(*vector.data)))
+#define VecAt(vector, index) (*(__typeof__(*(vector).data) *)__base_vec_at((void **)&(vector).data, &(vector).length, index, sizeof(*(vector).data)))
 
-#define VecAtPtr(vector, index) (__base_vec_at((void **)&(vector).data, &(vector).length, index, sizeof(*vector.data)))
+#define VecAtPtr(vector, index) (__base_vec_at((void **)&(vector).data, &(vector).length, (index), sizeof(*(vector).data)))
 
 #define VecFree(vector) __base_vec_free((void **)&(vector).data, &(vector).length, &(vector).capacity)
 
-#define VecForEach(vector, it) for (__typeof__(*vector.data) *it = vector.data; it < vector.data + vector.length; it++)
+#define VecForEach(vector, it) for (__typeof__(*(vector).data) *(it) = (vector).data; it < (vector).data + (vector).length; it++)
 
 /* --- Time and Platforms --- */
 i64 TimeNow(void);
@@ -339,7 +339,7 @@ void *Malloc(size_t size);
 void Free(void *address);
 
 /* --- String and Macros --- */
-#define STRING_LENGTH(s) ((sizeof(s) / sizeof((s)[0])) - sizeof((s)[0])) // NOTE: Inspired from clay.h
+#define STRING_LENGTH(s) ((sizeof((s)) / sizeof((s)[0])) - sizeof((s)[0])) // NOTE: Inspired from clay.h
 #define ENSURE_STRING_LITERAL(x) ("" x "")
 
 // NOTE: If an error led you here, it's because `S` can only be used with string literals, i.e. `S("SomeString")` and not `S(yourString)` - for that use `s()`
@@ -355,7 +355,7 @@ VEC_TYPE(StringVector, String);
     size_t count = sizeof(values) / sizeof(values[0]); \
     for (size_t i = 0; i < count; i++) {               \
       String value = s(values[i]);                     \
-      VecPush(vector, value);                          \
+      VecPush((vector), value);                        \
     }                                                  \
   } while (0)
 
