@@ -210,6 +210,83 @@ static void TestFileSystemEdgeCases(void) {
   TEST_END();
 }
 
+static void TestFileCopy(void) {
+  TEST_BEGIN("FileCopy");
+  {
+    Arena *arena = ArenaCreate(1024);
+
+    String sourceContent = S("Source file content for copy test");
+    errno_t writeResult = FileWrite(S("source.txt"), sourceContent);
+    TEST_ASSERT(writeResult == SUCCESS, "Should write source file successfully");
+
+    errno_t copyResult = FileCopy(S("source.txt"), S("destination.txt"));
+    TEST_ASSERT(copyResult == FILE_COPY_SUCCESS, "Should copy file successfully");
+
+    String destContent;
+    errno_t readResult = FileRead(arena, S("destination.txt"), &destContent);
+    TEST_ASSERT(readResult == SUCCESS, "Should read destination file successfully");
+    TEST_ASSERT(destContent.length == sourceContent.length, "Destination content size should match source");
+
+    bool contentMatch = true;
+    for (size_t i = 0; i < sourceContent.length; i++) {
+      if (sourceContent.data[i] != destContent.data[i]) {
+        contentMatch = false;
+        break;
+      }
+    }
+    TEST_ASSERT(contentMatch, "Destination content should match source content");
+
+    String newContent = S("New content to overwrite");
+    errno_t writeNew = FileWrite(S("destination.txt"), newContent);
+    TEST_ASSERT(writeNew == SUCCESS, "Should write new content to destination");
+
+    errno_t copyOverwrite = FileCopy(S("source.txt"), S("destination.txt"));
+    TEST_ASSERT(copyOverwrite == FILE_COPY_SUCCESS, "Should overwrite existing file");
+
+    String overwrittenContent;
+    errno_t readOverwritten = FileRead(arena, S("destination.txt"), &overwrittenContent);
+    TEST_ASSERT(readOverwritten == SUCCESS, "Should read overwritten file");
+    TEST_ASSERT(overwrittenContent.length == sourceContent.length, "Overwritten content size should match source");
+
+    bool mkdirResult = Mkdir(S("copy-test-dir"));
+    TEST_ASSERT(mkdirResult == true, "Should create test subdirectory");
+
+    errno_t copySubdir = FileCopy(S("source.txt"), S("copy-test-dir/copied.txt"));
+    TEST_ASSERT(copySubdir == FILE_COPY_SUCCESS, "Should copy to subdirectory");
+
+    String subdirContent;
+    errno_t readSubdir = FileRead(arena, S("copy-test-dir/copied.txt"), &subdirContent);
+    TEST_ASSERT(readSubdir == SUCCESS, "Should read file from subdirectory");
+    TEST_ASSERT(subdirContent.length == sourceContent.length, "Subdirectory copy content size should match source");
+
+    errno_t writeEmpty = FileWrite(S("empty-source.txt"), S(""));
+    TEST_ASSERT(writeEmpty == SUCCESS, "Should write empty source file");
+
+    errno_t copyEmpty = FileCopy(S("empty-source.txt"), S("empty-dest.txt"));
+    TEST_ASSERT(copyEmpty == FILE_COPY_SUCCESS, "Should copy empty file");
+
+    String emptyContent;
+    errno_t readEmpty = FileRead(arena, S("empty-dest.txt"), &emptyContent);
+    TEST_ASSERT(readEmpty == SUCCESS, "Should read empty destination file");
+    TEST_ASSERT(emptyContent.length == 0, "Empty destination content should be empty");
+
+    errno_t copyNonExistent = FileCopy(S("non-existent.txt"), S("dest.txt"));
+    TEST_ASSERT(copyNonExistent == FILE_COPY_SOURCE_NOT_FOUND, "Should return FILE_COPY_SOURCE_NOT_FOUND for non-existent source");
+
+    errno_t copyInvalidDest = FileCopy(S("source.txt"), S(""));
+    TEST_ASSERT(copyInvalidDest != FILE_COPY_SUCCESS, "Should fail when copying to empty path");
+
+    FileDelete(S("source.txt"));
+    FileDelete(S("destination.txt"));
+    FileDelete(S("copy-test-dir/copied.txt"));
+    FileDelete(S("empty-source.txt"));
+    FileDelete(S("empty-dest.txt"));
+
+    ArenaFree(arena);
+  }
+  TEST_END();
+}
+
 i32 main(void) {
   StartTest();
   {
@@ -218,6 +295,7 @@ i32 main(void) {
     TestDirectoryOperations();
     TestPathHandling();
     TestFileSystemEdgeCases();
+    TestFileCopy();
   }
   EndTest();
 }

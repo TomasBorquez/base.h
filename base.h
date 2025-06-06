@@ -1,7 +1,7 @@
 /* MIT License
 
   base.h - Better cross-platform STD
-  Version - 2025-05-30 (0.2.2):
+  Version - 2025-06-06 (0.2.3):
   https://github.com/TomasBorquez/base.h
 
   Usage:
@@ -154,8 +154,6 @@ extern "C" {
 
 /* Process/Threading */
 #  define getpid _getpid
-#  define execvp _execvp
-#  define execve _execve
 #  define sleep(x) Sleep((x) * 1000)
 #  define usleep(x) Sleep((x) / 1000)
 
@@ -265,20 +263,27 @@ void _custom_assert(const char *expr, const char *file, unsigned line, const cha
   } while (0)
 
 #define VecPush(vector, value) __base_vec_push((void **)&(vector).data, &(vector).length, &(vector).capacity, sizeof(*(vector).data), &(value));
+void __base_vec_push(void **data, size_t *length, size_t *capacity, size_t element_size, void *value);
 
 #define VecPop(vector) __base_vec_pop((vector).data, &(vector).length, sizeof(*(vector).data));
+void *__base_vec_pop(void *data, size_t *length, size_t element_size);
 
 #define VecShift(vector) __base_vec_shift((void **)&(vector).data, &(vector).length, sizeof(*(vector).data))
+void __base_vec_shift(void **data, size_t *length, size_t element_size);
 
 #define VecUnshift(vector, value) __base_vec_unshift((void **)&(vector).data, &(vector).length, &(vector).capacity, sizeof(*(vector).data), &(value))
+void __base_vec_unshift(void **data, size_t *length, size_t *capacity, size_t element_size, const void *value);
 
 #define VecInsert(vector, value, index) __base_vec_insert((void **)&(vector).data, &(vector).length, &(vector).capacity, sizeof(*(vector).data), &(value), (index))
+void __base_vec_insert(void **data, size_t *length, size_t *capacity, size_t element_size, void *value, size_t index);
 
 #define VecAt(vector, index) (*(__typeof__(*(vector).data) *)__base_vec_at((void **)&(vector).data, &(vector).length, index, sizeof(*(vector).data)))
+void *__base_vec_at(void **data, size_t *length, size_t index, size_t elementSize);
 
 #define VecAtPtr(vector, index) (__base_vec_at((void **)&(vector).data, &(vector).length, (index), sizeof(*(vector).data)))
 
 #define VecFree(vector) __base_vec_free((void **)&(vector).data, &(vector).length, &(vector).capacity)
+void __base_vec_free(void **data, size_t *length, size_t *capacity);
 
 #define VecForEach(vector, it) for (__typeof__(*(vector).data) *(it) = (vector).data; it < (vector).data + (vector).length; it++)
 
@@ -434,6 +439,9 @@ WARN_UNUSED FileDeleteError FileDelete(String path);
 typedef enum { FILE_RENAME_SUCCESS = 0, FILE_RENAME_ACCESS_DENIED = 600, FILE_RENAME_NOT_FOUND, FILE_RENAME_IO_ERROR } FileRenameError;
 WARN_UNUSED FileRenameError FileRename(String oldPath, String newPath);
 
+typedef enum { FILE_COPY_SUCCESS = 0, FILE_COPY_SOURCE_NOT_FOUND = 700, FILE_COPY_DEST_ACCESS_DENIED, FILE_COPY_SOURCE_ACCESS_DENIED, FILE_COPY_DISK_FULL, FILE_COPY_IO_ERROR } FileCopyError;
+WARN_UNUSED FileCopyError FileCopy(String sourcePath, String destPath);
+
 // NOTE: Same error enum since it uses `FileWrite("")` under the hood
 WARN_UNUSED FileWriteError FileReset(String path);
 
@@ -448,7 +456,7 @@ void LogInit(void);
 void LogInfo(const char *format, ...) FORMAT_CHECK(1, 2);
 void LogWarn(const char *format, ...) FORMAT_CHECK(1, 2);
 void LogError(const char *format, ...) FORMAT_CHECK(1, 2);
-static void logErrorV(const char *format, va_list args) FORMAT_CHECK(1, 0);
+void logErrorV(const char *format, va_list args) FORMAT_CHECK(1, 0);
 void LogSuccess(const char *format, ...) FORMAT_CHECK(1, 2);
 
 /* --- Math --- */
@@ -535,7 +543,7 @@ bool IniGetBool(IniFile *ini, String key);
 */
 #if defined(BASE_IMPLEMENTATION)
 // --- Vector Implementation ---
-static void __base_vec_push(void **data, size_t *length, size_t *capacity, size_t element_size, void *value) {
+void __base_vec_push(void **data, size_t *length, size_t *capacity, size_t element_size, void *value) {
   // WARNING: Vector must always be initialized to zero `Vector vector = {0}`
   Assert(*length <= *capacity, "VecPush: Possible memory corruption or vector not initialized, `Vector vector = {0}`");
   Assert(!(*length > 0 && *data == NULL), "VecPush: Possible memory corruption, data should be NULL only if length == 0");
@@ -553,19 +561,19 @@ static void __base_vec_push(void **data, size_t *length, size_t *capacity, size_
   (*length)++;
 }
 
-static void *__base_vec_pop(void *data, size_t *length, size_t element_size) {
+void *__base_vec_pop(void *data, size_t *length, size_t element_size) {
   Assert(*length > 0, "VecPop: Cannot pop from empty vector");
   (*length)--;
   return (char *)data + (*length * element_size);
 }
 
-static void __base_vec_shift(void **data, size_t *length, size_t element_size) {
+void __base_vec_shift(void **data, size_t *length, size_t element_size) {
   Assert(*length != 0, "VecShift: Length should at least be >= 1");
   memmove(*data, (char *)(*data) + element_size, ((*length) - 1) * element_size);
   (*length)--;
 }
 
-static void __base_vec_unshift(void **data, size_t *length, size_t *capacity, size_t element_size, const void *value) {
+void __base_vec_unshift(void **data, size_t *length, size_t *capacity, size_t element_size, const void *value) {
   if (*length >= *capacity) {
     if (*capacity == 0) *capacity = 2;
     else *capacity *= 2;
@@ -580,7 +588,7 @@ static void __base_vec_unshift(void **data, size_t *length, size_t *capacity, si
   (*length)++;
 }
 
-static void __base_vec_insert(void **data, size_t *length, size_t *capacity, size_t element_size, void *value, size_t index) {
+void __base_vec_insert(void **data, size_t *length, size_t *capacity, size_t element_size, void *value, size_t index) {
   Assert(index <= *length, "VecInsert: Index out of bounds for insertion");
 
   if (*length >= *capacity) {
@@ -597,13 +605,13 @@ static void __base_vec_insert(void **data, size_t *length, size_t *capacity, siz
   (*length)++;
 }
 
-static void *__base_vec_at(void **data, size_t *length, size_t index, size_t elementSize) {
+void *__base_vec_at(void **data, size_t *length, size_t index, size_t elementSize) {
   Assert(index >= 0 && index < *length, "VecAt: Index out of bounds");
   void *address = (char *)(*data) + (index * elementSize);
   return address;
 }
 
-static void __base_vec_free(void **data, size_t *length, size_t *capacity) {
+void __base_vec_free(void **data, size_t *length, size_t *capacity) {
   free(*data);
   *data = NULL;
   *length = 0;
@@ -1042,8 +1050,8 @@ String s(char *msg) {
   }
 
   return (String){
-      .length = strlen(msg),
-      .data = msg,
+    .length = strlen(msg),
+    .data = msg,
   };
 }
 
@@ -1779,6 +1787,27 @@ StringVector ListDir(Arena *arena, String path) {
   FindClose(hFind);
   return result;
 }
+
+FileCopyError FileCopy(String sourcePath, String destPath) {
+  if (!CopyFileA(sourcePath.data, destPath.data, FALSE)) {
+    DWORD error = GetLastError();
+    switch (error) {
+    case ERROR_FILE_NOT_FOUND:
+    case ERROR_PATH_NOT_FOUND:
+      return FILE_COPY_SOURCE_NOT_FOUND;
+    case ERROR_ACCESS_DENIED:
+      if (GetFileAttributesA(sourcePath.data) == INVALID_FILE_ATTRIBUTES) {
+        return FILE_COPY_SOURCE_ACCESS_DENIED;
+      }
+      return FILE_COPY_DEST_ACCESS_DENIED;
+    case ERROR_DISK_FULL:
+      return FILE_COPY_DISK_FULL;
+    default:
+      return FILE_COPY_IO_ERROR;
+    }
+  }
+  return FILE_COPY_SUCCESS;
+}
 #  else
 char *GetCwd() {
   static char currentPath[PATH_MAX];
@@ -2018,6 +2047,74 @@ StringVector ListDir(Arena *arena, String path) {
   closedir(dir);
   return result;
 }
+
+FileCopyError FileCopy(String sourcePath, String destPath) {
+  int srcFd = -1, destFd = -1;
+  FileCopyError result = FILE_COPY_SUCCESS;
+
+  // Open source file
+  srcFd = open(sourcePath.data, O_RDONLY);
+  if (srcFd == -1) {
+    int error = errno;
+    switch (error) {
+    case ENOENT:
+      return FILE_COPY_SOURCE_NOT_FOUND;
+    case EACCES:
+      return FILE_COPY_SOURCE_ACCESS_DENIED;
+    default:
+      return FILE_COPY_IO_ERROR;
+    }
+  }
+
+  // Get source file size and permissions
+  struct stat srcStat;
+  if (fstat(srcFd, &srcStat) != 0) {
+    close(srcFd);
+    return FILE_COPY_IO_ERROR;
+  }
+
+  // Open destination file
+  destFd = open(destPath.data, O_WRONLY | O_CREAT | O_TRUNC, srcStat.st_mode & 0777);
+  if (destFd == -1) {
+    int error = errno;
+    close(srcFd);
+    switch (error) {
+    case EACCES:
+      return FILE_COPY_DEST_ACCESS_DENIED;
+    case ENOSPC:
+      return FILE_COPY_DISK_FULL;
+    default:
+      return FILE_COPY_IO_ERROR;
+    }
+  }
+
+  // Copy data in chunks
+  char buffer[8192];
+  ssize_t bytesRead, bytesWritten;
+
+  while ((bytesRead = read(srcFd, buffer, sizeof(buffer))) > 0) {
+    bytesWritten = write(destFd, buffer, bytesRead);
+    if (bytesWritten != bytesRead) {
+      int error = errno;
+      result = (error == ENOSPC) ? FILE_COPY_DISK_FULL : FILE_COPY_IO_ERROR;
+      break;
+    }
+  }
+
+  if (bytesRead < 0) {
+    result = FILE_COPY_IO_ERROR;
+  }
+
+  close(srcFd);
+  close(destFd);
+
+  // If copy failed, clean up destination file
+  if (result != FILE_COPY_SUCCESS) {
+    unlink(destPath.data);
+  }
+
+  return result;
+}
 #  endif
 
 FileWriteError FileReset(String path) {
@@ -2043,7 +2140,7 @@ void LogWarn(const char *format, ...) {
   printf("%s\n", _RESET);
 }
 
-static void logErrorV(const char *format, va_list args) {
+void logErrorV(const char *format, va_list args) {
   printf("%s[ERROR]: ", _RED);
   vprintf(format, args);
   printf("%s\n", _RESET);
