@@ -248,9 +248,9 @@ void _custom_assert(const char *expr, const char *file, unsigned line, const cha
 #define Assert(expression, ...) (void)((!!(expression)) || (_custom_assert(#expression, __FILE__, __LINE__, __VA_ARGS__), 0))
 
 /* --- Vector --- */
-typedef int (*CompareFunc)(const void* a, const void* b);
+typedef i32 (*CompareFunc)(const void* a, const void* b);
 
-int __base_vec_partition(void **data, size_t element_size, CompareFunc compare, i32 low, i32 high);
+i32 __base_vec_partition(void **data, size_t element_size, CompareFunc compare, i32 low, i32 high);
 void __base_vec_quicksort(void **data, size_t element_size, CompareFunc compare, i32 low, i32 high);
 
 #define VecSort(vector, compare) __base_vec_quicksort((void**)&(vector).data, sizeof(*(vector).data), compare, 0, (vector).length - 1)
@@ -550,10 +550,10 @@ bool IniGetBool(IniFile *ini, String key);
 #if defined(BASE_IMPLEMENTATION)
 // --- Vector Implementation ---
 
-int __base_vec_partition(void **data, size_t element_size, CompareFunc compare, int low, int high) {
+i32 __base_vec_partition(void **data, size_t element_size, CompareFunc compare, i32 low, i32 high) {
     void* pivot = (char*)(*data) + (high * element_size);
-    int i = low - 1;
-    for (int j = low; j < high; j++) {
+    i32 i = low - 1;
+    for (i32 j = low; j < high; j++) {
         void* current = (char*)(*data) + (j * element_size);
         if (compare(current, pivot) < 0) {
             i++;
