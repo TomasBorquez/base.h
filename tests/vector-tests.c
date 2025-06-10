@@ -1,5 +1,11 @@
 #include "test.c"
 
+int compare_int(const void *a, const void *b) {
+    int *ia = (int *)a;
+    int *ib = (int *)b;
+    return *ia - *ib;
+}
+
 static void TestForEach(void) {
   TEST_BEGIN("StringVectorForEach");
   {
@@ -159,6 +165,31 @@ static void TestCapacity(void) {
   TEST_END();
 }
 
+static void TestSort(void) {
+  TEST_BEGIN("VectorSort");
+  {
+    VEC_TYPE(IntVector, int);
+    IntVector numbers = {0};
+    int values[] = {5, 3, 8, 1, 9, 2, 7, 4, 6};
+    for (size_t i = 0; i < sizeof(values)/sizeof(values[0]); ++i) {
+      int v = values[i];
+      VecPush(numbers, v);
+    }
+    TEST_ASSERT(numbers.length == 9, "Vector has 9 elements");
+    VecSort(numbers, compare_int);
+    bool is_sorted = true;
+    for (size_t i = 1; i < numbers.length; i++) {
+      if (numbers.data[i] < numbers.data[i-1]) {
+        is_sorted = false;
+        break;
+      }
+    }
+    TEST_ASSERT(is_sorted, "Vector is correctly sorted");
+    VecFree(numbers);
+  }
+  TEST_END();
+}
+
 i32 main(void) {
   StartTest();
   {
@@ -168,6 +199,7 @@ i32 main(void) {
     TestInsert();
     TestAccess();
     TestCapacity();
+    TestSort();
   }
   EndTest();
 }
