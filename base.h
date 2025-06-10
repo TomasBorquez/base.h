@@ -248,7 +248,13 @@ void _custom_assert(const char *expr, const char *file, unsigned line, const cha
 #define Assert(expression, ...) (void)((!!(expression)) || (_custom_assert(#expression, __FILE__, __LINE__, __VA_ARGS__), 0))
 
 /* --- Vector --- */
-// TODO: `VecSort` implement some sorting algorithm for sorting the vector
+typedef int (*CompareFunc)(const void* a, const void* b);
+
+int __base_vec_partition(void **data, size_t element_size, CompareFunc compare, int low, int high);
+void __base_vec_quicksort(void **data, size_t element_size, CompareFunc compare, int low, int high);
+
+#define VecSort(vector, compare) __base_vec_quicksort((void**)&(vector).data, sizeof(*(vector).data), compare, 0, (vector).length - 1)
+
 #define VEC_TYPE(typeName, valueType) \
   typedef struct {                    \
     valueType *data;                  \
@@ -543,6 +549,40 @@ bool IniGetBool(IniFile *ini, String key);
 */
 #if defined(BASE_IMPLEMENTATION)
 // --- Vector Implementation ---
+
+int __base_vec_partition(void **data, size_t element_size, CompareFunc compare, int low, int high) {
+    void* pivot = (char*)(*data) + (high * element_size);
+    int i = low - 1;
+    for (int j = low; j < high; j++) {
+        void* current = (char*)(*data) + (j * element_size);
+        if (compare(current, pivot) < 0) {
+            i++;
+            void* temp = (char*)(*data) + (i * element_size);
+            char* temp_buffer = Malloc(element_size);
+            memcpy(temp_buffer, temp, element_size);
+            memcpy(temp, current, element_size);
+            memcpy(current, temp_buffer, element_size);
+            Free(temp_buffer);
+        }
+    }
+    i++;
+    void* temp = (char*)(*data) + (i * element_size);
+    char* temp_buffer = Malloc(element_size);
+    memcpy(temp_buffer, temp, element_size);
+    memcpy(temp, pivot, element_size);
+    memcpy(pivot, temp_buffer, element_size);
+    Free(temp_buffer);
+    return i;
+}
+
+void __base_vec_quicksort(void **data, size_t element_size, CompareFunc compare, int low, int high) {
+    if (low < high) {
+        int pi = __base_vec_partition(data, element_size, compare, low, high);
+        __base_vec_quicksort(data, element_size, compare, low, pi - 1);
+        __base_vec_quicksort(data, element_size, compare, pi + 1, high);
+    }
+}
+
 void __base_vec_push(void **data, size_t *length, size_t *capacity, size_t element_size, void *value) {
   // WARNING: Vector must always be initialized to zero `Vector vector = {0}`
   Assert(*length <= *capacity, "VecPush: Possible memory corruption or vector not initialized, `Vector vector = {0}`");
