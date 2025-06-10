@@ -1,6 +1,6 @@
 #include "test.c"
 
-int compare_int(const void *a, const void *b) {
+int compareInt(const void *a, const void *b) {
     int *ia = (int *)a;
     int *ib = (int *)b;
     return *ia - *ib;
@@ -176,7 +176,7 @@ static void TestSort(void) {
       VecPush(numbers, v);
     }
     TEST_ASSERT(numbers.length == 9, "Vector has 9 elements");
-    VecSort(numbers, compare_int);
+    VecSort(numbers, compareInt);
     bool is_sorted = true;
     for (size_t i = 1; i < numbers.length; i++) {
       if (numbers.data[i] < numbers.data[i-1]) {

@@ -250,8 +250,8 @@ void _custom_assert(const char *expr, const char *file, unsigned line, const cha
 /* --- Vector --- */
 typedef int (*CompareFunc)(const void* a, const void* b);
 
-int __base_vec_partition(void **data, size_t element_size, CompareFunc compare, int low, int high);
-void __base_vec_quicksort(void **data, size_t element_size, CompareFunc compare, int low, int high);
+int __base_vec_partition(void **data, size_t element_size, CompareFunc compare, i32 low, i32 high);
+void __base_vec_quicksort(void **data, size_t element_size, CompareFunc compare, i32 low, i32 high);
 
 #define VecSort(vector, compare) __base_vec_quicksort((void**)&(vector).data, sizeof(*(vector).data), compare, 0, (vector).length - 1)
 
@@ -575,9 +575,9 @@ int __base_vec_partition(void **data, size_t element_size, CompareFunc compare, 
     return i;
 }
 
-void __base_vec_quicksort(void **data, size_t element_size, CompareFunc compare, int low, int high) {
+void __base_vec_quicksort(void **data, size_t element_size, CompareFunc compare, i32 low, i32 high) {
     if (low < high) {
-        int pi = __base_vec_partition(data, element_size, compare, low, high);
+        i32 pi = __base_vec_partition(data, element_size, compare, low, high);
         __base_vec_quicksort(data, element_size, compare, low, pi - 1);
         __base_vec_quicksort(data, element_size, compare, pi + 1, high);
     }
