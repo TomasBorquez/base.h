@@ -1,0 +1,62 @@
+name: Run Tests FreeBSD
+on:
+  push:
+    paths:
+      - "**/*.c"
+      - "**/*.h"
+      - ".github/workflows/*.yml"
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  test-examples:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        compiler: [gcc, clang]
+
+    env:
+      COMPILER: ${{ matrix.compiler }}
+
+    steps:
+    - name: Checkout code with submodules
+      uses: actions/checkout@v3
+      with:
+        submodules: recursive
+        fetch-depth: 0
+        token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Run tests in FreeBSD VM
+      uses: vmactions/freebsd-vm@v1
+      with:
+        usesh: true
+        release: "14.2"
+        prepare: |
+          pkg update -f
+          if [ "${{ matrix.compiler }}" = "clang" ]; then
+            pkg install -y llvm19
+          else
+            pkg install -y ${{ matrix.compiler }}
+          fi
+        run: |
+          for test in arena-tests file-system-tests ini-parser-tests string-tests vector-tests; do
+          echo "Running $test with ${{ matrix.compiler }}..."
+          cd ./tests/ || exit 1
+
+          # Special case for ini-parser-tests which needs -lm
+          if [ "$test" = "ini-parser-tests" ]; then
+              ${{ matrix.compiler }} $test.c -o $test -lm
+          else
+              ${{ matrix.compiler }} $test.c -o $test
+          fi
+
+          ./$test
+          if [ $? -ne 0 ]; then
+              echo "$test failed with ${{ matrix.compiler }}"
+              exit 1
+          fi
+          cd - > /dev/null
+          done

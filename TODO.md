@@ -31,6 +31,7 @@
     - [x] `GetPlatform()` should return enum of platforms
     - [x] `isLinux()` should be on base
     - [x] `isWindows()` as well
+    - [x] `isFreeBSD()` as well
     - [x] add `isAndroid()`
     - [x] add `isMacOs()`
     - [x] add `isEmscripten()`
@@ -38,6 +39,6 @@
 - [ ] Static `MAX_PATH` is fragile:
     - [ ] https://eklitzke.org/path-max-is-tricky (GNU extension `char *get_current_dir_name()` dynamic length)
     - [ ] `wide paths` UTF16 on windows
-- [ ] `System()` to run commands is fragile 
+- [ ] `System()` to run commands is fragile
     - [ ] Depends on the OS shell syntax which is not portable. It should use platform primitives such as CreateProcess on windows and fork+exec (or posix_spawn) on unix.
 - [ ] Add `StrIncludes`, `StrIncludesStart`, `StrIncludesEnd`
