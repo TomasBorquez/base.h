@@ -252,6 +252,9 @@ typedef struct {
 void _custom_assert(const char *expr, const char *file, unsigned line, const char *format, ...) FORMAT_CHECK(4, 5);
 #define Assert(expression, ...) (void)((!!(expression)) || (_custom_assert(#expression, __FILE__, __LINE__, __VA_ARGS__), 0))
 
+void _custom_unreachable(const char *file, unsigned line, const char *format, ...) FORMAT_CHECK(3, 4);
+#define Unreachable(...) (void)((_custom_unreachable(__FILE__, __LINE__, __VA_ARGS__), 0))
+
 /* --- Vector --- */
 typedef i32 (*CompareFunc)(const void *a, const void *b);
 
@@ -927,6 +930,19 @@ String ErrToStr(errno_t err) {
 
 void _custom_assert(const char *expr, const char *file, unsigned line, const char *format, ...) {
   printf("%sAssertion failed: %s, file %s, line %u %s\n", _RED, expr, file, line, _RESET);
+
+  if (format) {
+    va_list args;
+    va_start(args, format);
+    logErrorV(format, args);
+    va_start(args, format);
+  }
+
+  abort();
+}
+
+void _custom_unreachable(const char *file, unsigned line, const char *format, ...) {
+  printf("%sReached Unreachable code at file %s, line %u %s\n", _RED, file, line, _RESET);
 
   if (format) {
     va_list args;
