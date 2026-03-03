@@ -485,10 +485,8 @@ void LogSuccess(const char *format, ...) FORMAT_CHECK(1, 2);
   } while (0);
 
 /* --- Defer Macros --- */
-#if defined(DEFER_MACRO) // NOTE: Optional since not all compilers support it and not all C versions do either
-/* - GCC implementation -
-  NOTE: Must use C23 (depending on the platform)
-*/
+#if defined(DEFER_MACRO)
+/* [GCC implementation] Must use C23 (depending on the platform) */
 #  if defined(COMPILER_GCC)
 #    define defer __DEFER(__COUNTER__)
 #    define __DEFER(N) __DEFER_(N)
@@ -498,9 +496,7 @@ void LogSuccess(const char *format, ...) FORMAT_CHECK(1, 2);
       [[gnu::cleanup(F)]] int V; \
       auto void F(int *)
 
-/* - Clang implementation -
-  NOTE: Must compile with flag `-fblocks`
-*/
+/* [Clang implementation] Must compile with flag `-fblocks` */
 #  elif defined(COMPILER_CLANG)
 typedef void (^const __df_t)(void);
 
@@ -514,9 +510,7 @@ static inline void __df_cb(__df_t *__fp) {
 #    define __DEFER_(N) __DEFER__(__DEFER_VARIABLE_##N)
 #    define __DEFER__(V) [[gnu::cleanup(__df_cb)]] __df_t V = ^void(void)
 
-/* -- MSVC implementation --
-  NOTE: Not available yet in MSVC, use `_try/_finally`
-*/
+/* [MSVC implementation] */
 #  elif defined(COMPILER_MSVC)
 #    error "Not available yet in MSVC, use `_try/_finally`"
 #  endif
