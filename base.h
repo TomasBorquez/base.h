@@ -76,6 +76,9 @@
 #if defined(PLATFORM_WIN)
 #  define WIN32_LEAN_AND_MEAN
 #  include <windows.h>
+#  if !defined(ENABLE_VIRTUAL_TERMINAL_PROCESSING) // Old SDKs sometimes dont have it
+#    define ENABLE_VIRTUAL_TERMINAL_PROCESSING 0x0004
+#  endif
 #else
 #  define _POSIX_C_SOURCE 200809L
 #  define _GNU_SOURCE
