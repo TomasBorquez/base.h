@@ -91,10 +91,6 @@
 #  include <unistd.h>
 #endif
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #if defined(__STDC_VERSION__)
 #  if (__STDC_VERSION__ >= 202311L)
 #    define C_STANDARD_C23
@@ -247,8 +243,7 @@ typedef struct {
 #define I64_MAX INT64_MAX
 #define I64_MIN INT64_MIN
 
-#define TYPE_INIT(type) (type)
-
+/* --- Assertions --- */
 void _custom_assert(const char *expr, const char *file, unsigned line, const char *format, ...) FORMAT_CHECK(4, 5);
 #define Assert(expression, ...) (void)((!!(expression)) || (_custom_assert(#expression, __FILE__, __LINE__, __VA_ARGS__), 0))
 
@@ -358,6 +353,7 @@ void *Malloc(size_t size);
 void Free(void *address);
 
 /* --- String and Macros --- */
+#define TYPE_INIT(type) (type)
 #define STRING_LENGTH(s) ((sizeof((s)) / sizeof((s)[0])) - sizeof((s)[0])) // NOTE: Inspired from clay.h
 #define ENSURE_STRING_LITERAL(x) ("" x "")
 
@@ -541,17 +537,13 @@ i64 IniGetLong(IniFile *ini, String key);
 f64 IniGetDouble(IniFile *ini, String key);
 bool IniGetBool(IniFile *ini, String key);
 
-#ifdef __cplusplus
-}
-#endif
-
 /* MIT License
    base.h - Implementation of base.h
    https://github.com/TomasBorquez/base.h
 */
 #if defined(BASE_IMPLEMENTATION)
-// --- Vector Implementation ---
 
+/* --- Vector Implementation --- */
 i32 __base_vec_partition(void **data, size_t element_size, CompareFunc compare, i32 low, i32 high) {
   void *pivot = (char *)(*data) + (high * element_size);
   i32 i = low - 1;
@@ -660,7 +652,7 @@ void __base_vec_free(void **data, size_t *length, size_t *capacity) {
   *capacity = 0;
 }
 
-// --- Time and Platforms Implementation ---
+/* --- Time and Platforms Implementation --- */
 #  if !defined(PLATFORM_WIN)
 
 #    if !defined(EINVAL)
@@ -1027,7 +1019,7 @@ Arena *ArenaCreate(size_t chunkSize) {
   return res;
 }
 
-/* Memory Allocations */
+/* --- Memory Allocations --- */
 // TODO: Add hashmap that checks for unfreed values only on DEBUG, __FILE__ and __LINE__
 void *Malloc(size_t size) {
   Assert(size > 0, "Malloc: size cant be negative");
@@ -1049,7 +1041,7 @@ void Free(void *address) {
   free(address);
 }
 
-/* String Implementation */
+/* --- String Implementation --- */
 static size_t maxStringSize = 10000;
 
 static size_t strLength(char *str, size_t maxSize) {
@@ -1543,7 +1535,7 @@ void StringBuilderAppend(Arena *arena, StringBuilder *builder, String *string) {
   builder->buffer.data[builder->buffer.length] = '\0';
 }
 
-/* Random Implemenation */
+/* --- Random Implemenation --- */
 static u64 seed = 0;
 
 u64 RandomGetSeed(void) {
@@ -1580,7 +1572,7 @@ f32 RandomFloat(f32 min, f32 max) {
   return min + normalized * (max - min);
 }
 
-/* File System Implementation */
+/* --- File System Implementation --- */
 #  if defined(PLATFORM_WIN)
 char *GetCwd(void) {
   static char currentPath[MAX_PATH];
@@ -2178,7 +2170,7 @@ FileWriteError FileReset(String path) {
   return FileWrite(path, S(""));
 }
 
-/* Logger Implemenation */
+/* --- Logger Implemenation --- */
 void LogInfo(const char *format, ...) {
   printf("%s[INFO]: ", _GRAY);
   va_list args;
@@ -2240,7 +2232,7 @@ errno_t IniParse(String path, IniFile *result) {
     FileWriteError errWrite = FileReset(path);
     Assert(errWrite == FILE_WRITE_SUCCESS, "IniParse: Failed creating file for path %s, err: %d", path.data, err);
 
-    result->arena = ArenaCreate(sizeof(String) * 10); // Initialize arena
+    result->arena = ArenaCreate(sizeof(String) * 10);
     return SUCCESS;
   }
 
