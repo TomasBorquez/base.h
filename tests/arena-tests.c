@@ -1,4 +1,4 @@
-#include "test.c"
+#include "test-framework.c"
 
 static void TestBasicArena(void) {
   TEST_BEGIN("Basic Arena Test");

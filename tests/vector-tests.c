@@ -1,8 +1,8 @@
-#include "test.c"
+#include "test-framework.c"
 
-int compareInt(const void *a, const void *b) {
-    int *ia = (int *)a;
-    int *ib = (int *)b;
+static int compareInt(const void *a, const void *b) {
+    const int *ia = (const int *)a;
+    const int *ib = (const int *)b;
     return *ia - *ib;
 }
 

@@ -13,11 +13,11 @@ permissions:
 jobs:
   test-modules:
     runs-on: windows-latest
-    
+
     strategy:
       matrix:
         compiler: [gcc, clang, msvc]
-    
+
     steps:
     - name: Checkout code with submodules
       uses: actions/checkout@v3
@@ -25,7 +25,7 @@ jobs:
         submodules: recursive
         fetch-depth: 0  
         token: ${{ secrets.GITHUB_TOKEN }}
-        
+
     - name: Setup MSYS2
       if: matrix.compiler != 'msvc'
       uses: msys2/setup-msys2@v2
@@ -36,7 +36,7 @@ jobs:
         install: >-
           mingw-w64-x86_64-gcc
           mingw-w64-x86_64-clang
-    
+
     - name: Run tests with GCC/Clang
       if: matrix.compiler != 'msvc'
       working-directory: ./tests
@@ -51,7 +51,7 @@ jobs:
             exit 1
           fi
         done
-    
+
     - name: Run tests with MSVC
       if: matrix.compiler == 'msvc'
       working-directory: ./tests
@@ -61,7 +61,7 @@ jobs:
         @echo off
         setlocal enabledelayedexpansion
         set tests=arena-tests file-system-tests ini-parser-tests string-tests vector-tests
-        
+
         for %%t in (%tests%) do (
           echo Running %%t with MSVC...
           cl.exe /Fe:%%t.exe %%t.c

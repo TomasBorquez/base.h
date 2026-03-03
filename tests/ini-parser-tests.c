@@ -1,6 +1,6 @@
 #include <math.h>
 
-#include "test.c"
+#include "test-framework.c"
 
 static void TestIniParseBasic(void) {
   TEST_BEGIN("Ini Parse Basic");

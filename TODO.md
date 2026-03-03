@@ -36,4 +36,5 @@
     - [x] add `isMacOs()`
     - [x] add `isEmscripten()`
 - [x] Move private functions to `__base_` and snake_case
+- [x] Add tests script for local dev
 - [ ] Add `StrIncludes`, `StrIncludesStart`, `StrIncludesEnd`

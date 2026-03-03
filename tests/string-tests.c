@@ -1,4 +1,4 @@
-#include "test.c"
+#include "test-framework.c"
 
 static void TestStringCreation(void) {
   TEST_BEGIN("String Creation");

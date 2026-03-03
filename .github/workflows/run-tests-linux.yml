@@ -13,11 +13,11 @@ permissions:
 jobs:
   test-modules:
     runs-on: ubuntu-latest
-    
+
     strategy:
       matrix:
         compiler: [gcc, clang, tcc]
-    
+
     steps:
     - name: Checkout code with submodules
       uses: actions/checkout@v3
@@ -25,26 +25,20 @@ jobs:
         submodules: recursive
         fetch-depth: 0  
         token: ${{ secrets.GITHUB_TOKEN }}
-    
+
     - name: Install TCC
       if: matrix.compiler == 'tcc'
       run: |
         sudo apt-get update
         sudo apt-get install -y tcc
-    
+
     - name: Run tests
       working-directory: ./tests
       run: |
         for test in arena-tests file-system-tests ini-parser-tests string-tests vector-tests; do
           echo "Running $test with ${{ matrix.compiler }}..."
-          
-          # Special case for ini-parser-tests which needs -lm
-          if [ "$test" == "ini-parser-tests" ]; then
-            ${{ matrix.compiler }} $test.c -o $test -lm
-          else
-            ${{ matrix.compiler }} $test.c -o $test
-          fi
-          
+
+          ${{ matrix.compiler }} $test.c -o $test -lm
           ./$test
           if [ $? -ne 0 ]; then
             echo "$test failed with ${{ matrix.compiler }}"

@@ -1,4 +1,4 @@
-#include "test.c"
+#include "test-framework.c"
 
 static void TestFileOperations(void) {
   TEST_BEGIN("FileOperations");
@@ -210,6 +210,7 @@ static void TestFileSystemEdgeCases(void) {
   TEST_END();
 }
 
+
 static void TestFileCopy(void) {
   TEST_BEGIN("FileCopy");
   {
@@ -276,11 +277,17 @@ static void TestFileCopy(void) {
     errno_t copyInvalidDest = FileCopy(S("source.txt"), S(""));
     TEST_ASSERT(copyInvalidDest != FILE_COPY_SUCCESS, "Should fail when copying to empty path");
 
-    FileDelete(S("source.txt"));
-    FileDelete(S("destination.txt"));
-    FileDelete(S("copy-test-dir/copied.txt"));
-    FileDelete(S("empty-source.txt"));
-    FileDelete(S("empty-dest.txt"));
+    #define DELETE_ERRORS_COUNT 5
+    errno_t deleteErrors[DELETE_ERRORS_COUNT];
+    deleteErrors[0] = FileDelete(S("source.txt"));
+    deleteErrors[1] = FileDelete(S("destination.txt"));
+    deleteErrors[2] = FileDelete(S("copy-test-dir/copied.txt"));
+    deleteErrors[3] = FileDelete(S("empty-source.txt"));
+    deleteErrors[4] = FileDelete(S("empty-dest.txt"));
+
+    for (size_t i = 0; i < DELETE_ERRORS_COUNT; i++) {
+      TEST_ASSERT(deleteErrors[i] == FILE_DELETE_SUCCESS, "Should not fail when deleting files");
+    }
 
     ArenaFree(arena);
   }
