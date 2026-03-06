@@ -383,6 +383,7 @@ StringVector StrSplit(Arena *arena, String string, String delimiter);
 StringVector StrSplitNewLine(Arena *arena, String str);
 bool StrEq(String string1, String string2);
 String StrConcat(Arena *arena, String string1, String string2);
+bool StrIncludes(String source, String subStr);
 
 void StrToLower(String string1);
 void StrToUpper(String string1);
@@ -1140,6 +1141,24 @@ String StrConcat(Arena *arena, String string1, String string2) {
 
   addNullTerminator(allocatedString, len);
   return (String){len, allocatedString};
+}
+
+bool StrIncludes(String source, String subStr)
+{
+    Assert(!StrIsNull(source), "StrIncludes: source should never be NULL");
+    Assert(!StrIsNull(subStr), "StrIncludes: subStr should never be NULL");
+
+    if (subStr.length == 0 || source.length == 0 || subStr.length > source.length)
+        return false;
+
+    for (size_t index = 0; index <= (source.length - subStr.length); index++)
+    {
+        if (source.data[index] == subStr.data[0])
+            if (memcmp(&source.data[index], subStr.data, subStr.length) == 0) // compare sub string
+                return true;
+    }
+
+    return false;
 }
 
 void StrCopy(String destination, String source) {
