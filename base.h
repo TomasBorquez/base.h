@@ -1326,12 +1326,12 @@ bool StrIncludes(String source, String subStr) {
     return false;
   }
 
-  for (size_t i = 0; i < source.length - subStr.length; i++) {
+  for (size_t i = 0; i <= source.length - subStr.length; i++) {
     if (source.data[i] != subStr.data[0]) {
       continue;
     }
 
-    if (memcmp(&source.data[i], subStr.data, subStr.length - i) == 0) {
+    if (memcmp(&source.data[i], subStr.data, subStr.length) == 0) {
       return true;
     }
   }

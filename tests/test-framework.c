@@ -20,6 +20,13 @@ static size_t totalTestsFailed = 0;
     LogError("assert failed %s", msg); \
   }
 
+#define TEST_ASSERT_NOT(cond, msg)         \
+  testsRun++;                          \
+  if (cond) {                       \
+    testsFailed++;                     \
+    LogError("assert failed %s", msg); \
+  }
+
 static void StartTest(void) {
   LogInfo("========== Running tests ==========");
 }

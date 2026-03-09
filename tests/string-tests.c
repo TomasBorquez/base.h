@@ -339,21 +339,27 @@ static void TestStringIncludes(void) {
   {
     String str1 = S("ABCDEFG");
     String str2 = S("DEF");
+    TEST_ASSERT(StrIncludes(str1, str2), "str2 SHOULD be in str1")
 
-    bool result = StrIncludes(str1, str2);
-    TEST_ASSERT(result, "str2 should be in str1")
+    String str3 = S("A");
+    String str4 = S("A");
+    TEST_ASSERT(StrIncludes(str3, str4), "str3 SHOULD be in str4")
 
-    String str3 = S("ABCDEFG");
-    String str4 = S("DOF");
-
-    bool result2 = StrIncludes(str3, str4);
-    TEST_ASSERT(result2, "str3 should NOT be in str4")
-
-    String str5 = S("ABCDEFG");
+    String str5 = S("SAONETUHOAUSOUTEOASUEONTHEUTSN");
     String str6 = S("SAONETUHOAUSOUTEOASUEONTHEUTSN");
+    TEST_ASSERT(StrIncludes(str5, str6), "str5 SHOULD be in str6")
 
-    bool result3 = StrIncludes(str5, str6);
-    TEST_ASSERT(result3, "str6 should NOT be in str5")
+    String str7 = S("SAONETUHOAUSOUTEOASUEONTHEUTS8");
+    String str8 = S("8");
+    TEST_ASSERT(StrIncludes(str7, str8), "str7 SHOULD be in str8")
+
+    String str9 = S("ABCDEFG");
+    String str10 = S("DOF");
+    TEST_ASSERT_NOT(StrIncludes(str9, str10), "str9 should NOT be in str10")
+
+    String str11 = S("ABCDEFG");
+    String str12 = S("SAONETUHOAUSOUTEOASUEONTHEUTSN");
+    TEST_ASSERT_NOT(StrIncludes(str11, str12), "str11 should NOT be in str12")
   }
   TEST_END();
 }
