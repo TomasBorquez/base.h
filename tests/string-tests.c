@@ -380,6 +380,29 @@ static void TestStringEdgeCases(void) {
   TEST_END();
 }
 
+static void TestStringIncludes(void)
+{
+    TEST_BEGIN("String Includes");
+    {
+        String text = S("hello world!");
+
+        String subString1 = S("hello");
+        String subString2 = S("he llo");
+        String subString3 = S("!");
+        String subString4 = S("hello world!");
+        String subString5 = S("");
+        String subString6 = S("hello world!hello world!");
+
+        TEST_ASSERT(StrIncludes(text, subString1), "Substring should be present");
+        TEST_ASSERT(!StrIncludes(text, subString2), "Substring should not be present");
+        TEST_ASSERT(StrIncludes(text, subString3), "Substring should be present");
+        TEST_ASSERT(StrIncludes(text, subString4), "Substring should be present");
+        TEST_ASSERT(!StrIncludes(text, subString5), "Substring should not be present. Empty substring.");
+        TEST_ASSERT(!StrIncludes(text, subString6), "Substring should not be present. Bigger substring.");
+    }
+    TEST_END();
+}
+
 i32 main(void) {
   StartTest();
   {
@@ -393,6 +416,7 @@ i32 main(void) {
     TestStringVectorFunctionality();
     TestStringIncludes();
     TestStringEdgeCases();
+    TestStringIncludes();
   }
   EndTest();
 }
