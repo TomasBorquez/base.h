@@ -1,7 +1,7 @@
 /* MIT License
 
   base.h - Better cross-platform STD
-  Version - 2025-06-06 (0.2.3):
+  Version - 2025-03-08 (0.2.4):
   https://github.com/TomasBorquez/base.h
 
   Usage:
@@ -393,8 +393,6 @@ void StrTrim(String *string);
 String StrSlice(Arena *arena, String str, size_t start, size_t end);
 
 bool StrIncludes(String source, String subStr);
-bool StrIncludesStart(String source, String subStr);
-bool StrIncludesEnd(String source, String subStr);
 
 String NormalizePath(Arena *arena, String path);
 String NormalizeExePath(Arena *arena, String path);
