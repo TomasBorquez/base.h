@@ -334,6 +334,30 @@ static void TestStringVectorFunctionality(void) {
   TEST_END();
 }
 
+static void TestStringIncludes(void) {
+  TEST_BEGIN("String Includes");
+  {
+    String str1 = S("ABCDEFG");
+    String str2 = S("DEF");
+
+    bool result = StrIncludes(str1, str2);
+    TEST_ASSERT(result, "str2 should be in str1")
+
+    String str3 = S("ABCDEFG");
+    String str4 = S("DOF");
+
+    bool result2 = StrIncludes(str3, str4);
+    TEST_ASSERT(result2, "str3 should NOT be in str4")
+
+    String str5 = S("ABCDEFG");
+    String str6 = S("SAONETUHOAUSOUTEOASUEONTHEUTSN");
+
+    bool result3 = StrIncludes(str5, str6);
+    TEST_ASSERT(result3, "str6 should NOT be in str5")
+  }
+  TEST_END();
+}
+
 static void TestStringEdgeCases(void) {
   TEST_BEGIN("String Edge Cases");
   {
@@ -367,6 +391,7 @@ i32 main(void) {
     TestStringSlicing();
     TestPathNormalization();
     TestStringVectorFunctionality();
+    TestStringIncludes();
     TestStringEdgeCases();
   }
   EndTest();

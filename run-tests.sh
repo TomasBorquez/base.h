@@ -1,7 +1,13 @@
 #!/usr/bin/env bash
 set -u
 
-TESTS=(arena-tests file-system-tests ini-parser-tests string-tests vector-tests)
+TESTS=(
+  "arena-tests"
+  "file-system-tests"
+  "ini-parser-tests"
+  "string-tests"
+  "vector-tests"
+)
 
 if [ $# -lt 1 ]; then
   echo "Usage: $0 <compiler> [specific_test]"

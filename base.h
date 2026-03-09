@@ -392,6 +392,10 @@ void StrTrim(String *string);
 
 String StrSlice(Arena *arena, String str, size_t start, size_t end);
 
+bool StrIncludes(String source, String subStr);
+bool StrIncludesStart(String source, String subStr);
+bool StrIncludesEnd(String source, String subStr);
+
 String NormalizePath(Arena *arena, String path);
 String NormalizeExePath(Arena *arena, String path);
 String NormalizeExtension(Arena *arena, String path);
@@ -1314,6 +1318,27 @@ String StrSlice(Arena *arena, String str, size_t start, size_t end) {
 
   size_t len = end - start;
   return StrNewSize(arena, str.data + start, len);
+}
+
+bool StrIncludes(String source, String subStr) {
+  Assert(!StrIsNull(source), "StrIncludes: source should never be NULL");
+  Assert(!StrIsNull(subStr), "StrIncludes: subStr should never be NULL");
+
+  if (source.length == 0 || subStr.length == 0 || subStr.length > source.length) {
+    return false;
+  }
+
+  for (size_t i = 0; i < source.length - subStr.length; i++) {
+    if (source.data[i] != subStr.data[0]) {
+      continue;
+    }
+
+    if (memcmp(&source.data[i], subStr.data, subStr.length - i) == 0) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 String F(Arena *arena, const char *format, ...) {
