@@ -45,6 +45,7 @@ fi
 
 for test in "${TESTS[@]}"; do
   echo "Running $test with $COMPILER..."
+
   if ! "$COMPILER" -g -O0 "${test}.c" -o "${test}${EXE}" -lm; then
     echo "Compilation of $test failed"
     cleanup
@@ -53,6 +54,14 @@ for test in "${TESTS[@]}"; do
 
   if ! valgrind --leak-check=full --show-leak-kinds=all ./"${test}${EXE}"; then
     echo "$test failed with $COMPILER"
+    cleanup
+    exit 1
+  fi
+
+  smatch_result=$(smatch "${test}.c")
+  if [ ${#smatch_result} -gt 1 ]; then
+    echo "Smatch found an error on $test: "
+    echo "$smatch_result"
     cleanup
     exit 1
   fi
