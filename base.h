@@ -1,7 +1,7 @@
 /* MIT License
 
   base.h - Better cross-platform STD
-  Version - 2025-03-08 (0.2.4):
+  Version - 2025-04-27 (0.2.5):
   https://github.com/TomasBorquez/base.h
 
   Usage:
@@ -161,7 +161,6 @@
 /* String functions */
 #  define strcasecmp _stricmp
 #  define strncasecmp _strnicmp
-#  define strdup _strdup
 
 /* File modes */
 #  define R_OK 4
@@ -378,7 +377,7 @@ void SetMaxStrSize(size_t size);
 String StrNew(Arena *arena, char *str);
 String StrNewSize(Arena *arena, char *str, size_t len); // Without null terminator
 
-void StrCopy(String destination, String source);
+void StrCopy(String *destination, String source);
 StringVector StrSplit(Arena *arena, String string, String delimiter);
 StringVector StrSplitNewLine(Arena *arena, String str);
 bool StrEq(String string1, String string2);
@@ -390,7 +389,7 @@ void StrToUpper(String string1);
 bool StrIsNull(String string);
 void StrTrim(String *string);
 
-String StrSlice(Arena *arena, String str, size_t start, size_t end);
+String StrSlice(Arena *arena, String str, size_t start, ssize_t end);
 
 bool StrIncludes(String source, String subStr);
 
@@ -408,7 +407,7 @@ typedef struct {
 
 StringBuilder StringBuilderCreate(Arena *arena);
 StringBuilder StringBuilderReserve(Arena *arena, size_t capacity);
-void StringBuilderAppend(Arena *arena, StringBuilder *builder, String *string);
+void StringBuilderAppend(Arena *arena, StringBuilder *builder, String string);
 
 /* --- Random --- */
 void RandomInit(void);
@@ -655,7 +654,10 @@ void __base_vec_free(void **data, size_t *length, size_t *capacity) {
 }
 
 /* --- Time and Platforms Implementation --- */
+
 #  if !defined(PLATFORM_WIN)
+WARN_UNUSED errno_t memcpy_s(void *dest, size_t destSize, const void *src, size_t count);
+WARN_UNUSED errno_t fopen_s(FILE **streamptr, const char *filename, const char *mode);
 
 #    if !defined(EINVAL)
 #      define EINVAL 22 // Invalid argument
@@ -1077,7 +1079,7 @@ String StrNewSize(Arena *arena, char *str, size_t len) {
   const size_t memorySize = sizeof(char) * len + 1; // NOTE: Includes null terminator
   char *allocatedString = ArenaAllocChars(arena, memorySize);
 
-  memcpy(allocatedString, str, memorySize);
+  memcpy(allocatedString, str, len);
   addNullTerminator(allocatedString, len);
   return (String){len, allocatedString};
 }
@@ -1109,7 +1111,7 @@ String s(char *msg) {
 String StrConcat(Arena *arena, String string1, String string2) {
   if (StrIsNull(string1)) {
     const size_t len = string2.length;
-    const size_t memorySize = sizeof(char) * len;
+    const size_t memorySize = sizeof(char) * len + 1;
     char *allocatedString = ArenaAllocChars(arena, memorySize);
 
     errno_t err = memcpy_s(allocatedString, memorySize, string2.data, string2.length);
@@ -1121,7 +1123,7 @@ String StrConcat(Arena *arena, String string1, String string2) {
 
   if (StrIsNull(string2)) {
     const size_t len = string1.length;
-    const size_t memorySize = sizeof(char) * len;
+    const size_t memorySize = sizeof(char) * len + 1;
     char *allocatedString = ArenaAllocChars(arena, memorySize);
     errno_t err = memcpy_s(allocatedString, memorySize, string1.data, string1.length);
     Assert(err == SUCCESS, "StrConcat: memcpy_s failed, err: %d", err);
@@ -1131,7 +1133,7 @@ String StrConcat(Arena *arena, String string1, String string2) {
   }
 
   const size_t len = string1.length + string2.length;
-  const size_t memorySize = sizeof(char) * len + 1; // NOTE: Includes null terminator
+  const size_t memorySize = sizeof(char) * len + 1;
   char *allocatedString = ArenaAllocChars(arena, memorySize);
 
   errno_t err = memcpy_s(allocatedString, memorySize, string1.data, string1.length);
@@ -1144,16 +1146,16 @@ String StrConcat(Arena *arena, String string1, String string2) {
   return (String){len, allocatedString};
 }
 
-void StrCopy(String destination, String source) {
-  Assert(!StrIsNull(destination), "StrCopy: destination should never be NULL");
+void StrCopy(String *destination, String source) {
+  Assert(!StrIsNull(*destination), "StrCopy: destination should never be NULL");
   Assert(!StrIsNull(source), "StrCopy: source should never be NULL");
-  Assert(destination.length >= source.length, "destination length should never smaller than source length");
+  Assert(destination->length >= source.length, "destination length should never smaller than source length");
 
-  errno_t err = memcpy_s(destination.data, destination.length, source.data, source.length);
+  errno_t err = memcpy_s(destination->data, destination->length + 1, source.data, source.length);
   Assert(err == SUCCESS, "StrCopy: memcpy_s failed, err: %d", err);
 
-  destination.length = source.length;
-  addNullTerminator(destination.data, destination.length);
+  destination->length = source.length;
+  addNullTerminator(destination->data, destination->length);
 }
 
 bool StrEq(String string1, String string2) {
@@ -1268,14 +1270,6 @@ void StrTrim(String *str) {
     return;
   }
 
-  if (str->length == 1) {
-    if (isSpace(str->data[0])) {
-      str->data[0] = '\0';
-      str->length = 0;
-    }
-    return;
-  }
-
   for (size_t i = 0; i < str->length; ++i) {
     char *currChar = &str->data[i];
     if (isSpace(*currChar)) {
@@ -1303,16 +1297,15 @@ void StrTrim(String *str) {
   addNullTerminator(str->data, len);
 }
 
-String StrSlice(Arena *arena, String str, size_t start, size_t end) {
-  Assert(start >= 0, "StrSlice: start index must be non-negative");
+String StrSlice(Arena *arena, String str, size_t start, ssize_t end) {
   Assert(start <= str.length, "StrSlice: start index out of bounds");
 
   if (end < 0) {
     end = str.length + end;
   }
 
-  Assert(end >= start, "StrSlice: end must be greater than or equal to start");
-  Assert(end <= str.length, "StrSlice: end index out of bounds");
+  Assert(end >= (ssize_t) start, "StrSlice: end must be greater than or equal to start");
+  Assert(end <= (ssize_t) str.length, "StrSlice: end index out of bounds");
 
   size_t len = end - start;
   return StrNewSize(arena, str.data + start, len);
@@ -1542,8 +1535,8 @@ StringBuilder StringBuilderReserve(Arena *arena, size_t capacity) {
   return result;
 }
 
-void StringBuilderAppend(Arena *arena, StringBuilder *builder, String *string) {
-  size_t newLength = builder->buffer.length + string->length;
+void StringBuilderAppend(Arena *arena, StringBuilder *builder, String string) {
+  size_t newLength = builder->buffer.length + string.length;
   if (newLength + 1 >= builder->capacity) {
     size_t newCapacity = (newLength + 1) * 2;
     char *data = ArenaAllocChars(arena, newCapacity);
@@ -1553,7 +1546,7 @@ void StringBuilderAppend(Arena *arena, StringBuilder *builder, String *string) {
     builder->capacity = newCapacity;
   }
 
-  memcpy(builder->buffer.data + builder->buffer.length, string->data, string->length);
+  memcpy(builder->buffer.data + builder->buffer.length, string.data, string.length);
   builder->buffer.length = newLength;
   builder->buffer.data[builder->buffer.length] = '\0';
 }
@@ -1639,12 +1632,12 @@ FileStatsError FileStats(String path, File *result) {
     nameStart = path.data;
   }
 
-  result->name = strdup(nameStart);
+  result->name = nameStart;
   char *extStart = strrchr(nameStart, '.');
   if (extStart) {
-    result->extension = strdup(extStart + 1);
+    result->extension = extStart + 1;
   } else {
-    result->extension = strdup("");
+    result->extension = "";
   }
 
   LARGE_INTEGER fileSize;
@@ -1881,7 +1874,7 @@ FileCopyError FileCopy(String sourcePath, String destPath) {
   return FILE_COPY_SUCCESS;
 }
 #  else
-char *GetCwd() {
+char *GetCwd(void) {
   static char currentPath[PATH_MAX];
   if (getcwd(currentPath, PATH_MAX) == NULL) {
     LogError("GetCwd: failed getting current directory, err: %s", strerror(errno));
@@ -1912,13 +1905,13 @@ FileStatsError FileStats(String path, File *result) {
   } else {
     nameStart = path.data;
   }
-  result->name = strdup(nameStart);
+  result->name = nameStart;
 
   char *extStart = strrchr(nameStart, '.');
   if (extStart) {
-    result->extension = strdup(extStart + 1);
+    result->extension = extStart + 1;
   } else {
-    result->extension = strdup("");
+    result->extension = "";
   }
 
   result->size = fileStat.st_size;
@@ -1980,7 +1973,7 @@ FileWriteError FileWrite(String path, String data) {
     }
   }
 
-  ssize_t bytesWritten = write(fd, data.data, data.length);
+  size_t bytesWritten = write(fd, data.data, data.length);
   if (bytesWritten != data.length) {
     int error = errno;
     close(fd);
@@ -2020,7 +2013,7 @@ FileAddError FileAdd(String path, String data) {
   newData[data.length] = '\n';
   size_t newLength = data.length + 1;
 
-  ssize_t bytesWritten = write(fd, newData, newLength);
+  size_t bytesWritten = write(fd, newData, newLength);
   if (bytesWritten != newLength) {
     int error = errno;
     close(fd);

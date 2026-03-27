@@ -72,6 +72,7 @@ static void TestFileOperations(void) {
     errno_t deletedStatsResult = FileStats(S("renamed-file.txt"), &deletedStats);
     TEST_ASSERT(deletedStatsResult == FILE_STATS_FILE_NOT_EXIST, "File should not exist after deletion");
 
+    VecFree(files);
     ArenaFree(arena);
   }
   TEST_END();
@@ -142,6 +143,7 @@ static void TestDirectoryOperations(void) {
     errno_t deleteResult = FileDelete(S("nested/test-file.txt"));
     TEST_ASSERT(deleteResult == SUCCESS, "Should delete file in nested directory");
 
+    VecFree(nestedFiles);
     ArenaFree(arena);
   }
   TEST_END();

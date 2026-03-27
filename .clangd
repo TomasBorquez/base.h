@@ -1,6 +1,6 @@
 CompileFlags:
   Add: [
-    -std=c99, -Wpedantic, -pedantic-errors,
+    -xc, -std=c99, -Wpedantic, -pedantic-errors,
     -Werror, -Wall, -Wextra, -Waggregate-return,
     -Wbad-function-cast, -Wcast-align, -Wcast-qual,
     -Wfloat-equal, -Wformat=2, -Wlogical-op, -Wmissing-declarations,

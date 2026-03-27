@@ -45,13 +45,13 @@ fi
 
 for test in "${TESTS[@]}"; do
   echo "Running $test with $COMPILER..."
-  if ! "$COMPILER" "${test}.c" -o "${test}${EXE}" -lm; then
+  if ! "$COMPILER" -g -O0 "${test}.c" -o "${test}${EXE}" -lm; then
     echo "Compilation of $test failed"
     cleanup
     exit 1
   fi
 
-  if ! "./${test}${EXE}"; then
+  if ! valgrind --leak-check=full --show-leak-kinds=all ./"${test}${EXE}"; then
     echo "$test failed with $COMPILER"
     cleanup
     exit 1

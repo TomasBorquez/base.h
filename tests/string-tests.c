@@ -48,7 +48,7 @@ static void TestStringManipulation(void) {
     TEST_ASSERT(concatenated.data[6] == 'W', "Concatenated string data incorrect");
 
     String destination = StrNewSize(arena, "", 5);
-    StrCopy(destination, str1);
+    StrCopy(&destination, str1);
     TEST_ASSERT(destination.length == 5, "Copied string length incorrect");
     TEST_ASSERT(StrEq(destination, str1), "Copied string should equal original");
 
@@ -89,6 +89,8 @@ static void TestStringSplitting(void) {
     TEST_ASSERT(StrEq(lines.data[1], S("line2")), "Second line incorrect");
     TEST_ASSERT(StrEq(lines.data[2], S("line3")), "Third line incorrect");
 
+    VecFree(parts);
+    VecFree(lines);
     ArenaFree(arena);
   }
   TEST_END();
@@ -104,11 +106,11 @@ static void TestStringBuilderFunctionality(void) {
     TEST_ASSERT(builder.buffer.length == 0, "New builder buffer should be empty");
 
     String str1 = S("Hello");
-    StringBuilderAppend(arena, &builder, &str1);
+    StringBuilderAppend(arena, &builder, str1);
     TEST_ASSERT(builder.buffer.length >= str1.length, "Builder buffer length incorrect after append");
 
     String str2 = S(" World");
-    StringBuilderAppend(arena, &builder, &str2);
+    StringBuilderAppend(arena, &builder, str2);
     TEST_ASSERT(builder.buffer.length >= str1.length + str2.length, "Builder buffer length incorrect after second append");
 
     String finalStr = builder.buffer;
@@ -330,6 +332,8 @@ static void TestStringVectorFunctionality(void) {
     TEST_ASSERT(StrEq(vector.data[0], S("item1")), "First vector item incorrect");
     TEST_ASSERT(StrEq(vector.data[1], S("item2")), "Second vector item incorrect");
     TEST_ASSERT(StrEq(vector.data[2], S("item3")), "Third vector item incorrect");
+
+    VecFree(vector);
   }
   TEST_END();
 }
