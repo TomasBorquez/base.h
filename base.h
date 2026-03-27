@@ -79,6 +79,7 @@
 #  if !defined(ENABLE_VIRTUAL_TERMINAL_PROCESSING) // Old SDKs sometimes dont have it
 #    define ENABLE_VIRTUAL_TERMINAL_PROCESSING 0x0004
 #  endif
+#  include <BaseTsd.h>
 #else
 #  define _POSIX_C_SOURCE 200809L
 #  define _GNU_SOURCE
@@ -132,6 +133,8 @@
 
 /* --- Platform Specific --- */
 #if defined(PLATFORM_WIN)
+#define ssize_t SSIZE_T
+
 /* Process functions */
 #  define popen _popen
 #  define pclose _pclose
