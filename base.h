@@ -1,7 +1,7 @@
 /* MIT License
 
   base.h - Better cross-platform STD
-  Version - 2025-04-27 (0.2.5):
+  Version - 2026-04-27 (0.2.5):
   https://github.com/TomasBorquez/base.h
 
   Usage:
