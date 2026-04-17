@@ -1586,6 +1586,8 @@ Error FileCopy(String src_path, String dest_path) {
     return ErrnoMatch(err);
   }
 
+  DWORD open_err = GetLastError();
+
   char buffer[8192];
   DWORD bytes_read, bytes_written;
   Error err = SUCCESS;
@@ -1599,9 +1601,16 @@ Error FileCopy(String src_path, String dest_path) {
     }
   }
 
-  if (err == SUCCESS && GetLastError() != ERROR_SUCCESS && GetLastError() != ERROR_HANDLE_EOF) {
-    err = ErrnoMatch(GetLastError());
+  if (err == SUCCESS) {
+    DWORD loop_err = GetLastError();
+    if (loop_err != ERROR_SUCCESS &&
+        loop_err != ERROR_HANDLE_EOF &&
+        loop_err != ERROR_ALREADY_EXISTS &&
+        loop_err != open_err) {
+      err = ErrnoMatch(loop_err);
+    }
   }
+
   CloseHandle(src);
   CloseHandle(dest);
 
