@@ -315,7 +315,6 @@ void Free(void *address) PARAM_NON_NULL;
 // NOTE: If an error led you here, it's because `S` can only be used with string literals, i.e. `S("SomeString")` and not `S(yourString)` - for that use `s()`
 #define S(string) (TYPE_INIT(String){.length = STRING_LENGTH(ENSURE_STRING_LITERAL(string)), .data = (char *)(uintptr_t)(string)})
 String s(char *msg);
-
 String F(Arena *arena, const char *format, ...) FORMAT_CHECK(2, 3);
 
 VEC_TYPE(StringVector, String);
@@ -334,12 +333,12 @@ String StrNew(Arena *arena, char *str);
 String StrNewSize(Arena *arena, char *str, size_t len); // len without null terminator
 
 void StrCopy(String *destination, String source);
-StringVector StrSplit(Arena *arena, String string, String delimiter);
 bool StrEq(String string1, String string2);
 String StrConcat(Arena *arena, String string1, String string2);
+StringVector StrSplit(Arena *arena, String string, String delimiter);
 
-void StrToLower(String string1);
 void StrToUpper(String string1);
+void StrToLower(String string1);
 
 bool StrIsNull(String string);
 void StrTrim(String *string);
@@ -737,6 +736,24 @@ void WaitTime(int64_t ms) {
 }
 
 /* --- Error Implementation --- */
+#  if defined(PLATFORM_WIN)
+Error ErrnoMatch(errno_t err) {
+  switch (err) {
+    case ERROR_FILE_NOT_FOUND:
+    case ERROR_PATH_NOT_FOUND:      return FILE_NOT_FOUND;
+    case ERROR_NOT_ENOUGH_MEMORY:
+    case ERROR_OUTOFMEMORY:         return FILE_NO_MEMORY;
+    case ERROR_ACCESS_DENIED:       return FILE_ACCESS_DENIED;
+    case ERROR_DISK_FULL:           return FILE_DISK_FULL;
+    case ERROR_ALREADY_EXISTS:      return FILE_ALREADY_EXISTS;
+    case ERROR_TOO_MANY_OPEN_FILES: return FILE_TOO_MANY_OPEN;
+    case ERROR_BUFFER_OVERFLOW:     return FILE_PATH_TOO_LONG;
+    case ERROR_DIRECTORY:           return FILE_IS_DIRECTORY;
+    case ERROR_WRITE_PROTECT:       return FILE_READ_ONLY_FS;
+    default:                        return FILE_ACCESS_DENIED;
+  }
+}
+#else
 Error ErrnoMatch(errno_t err) {
   if (err == SUCCESS) return SUCCESS;
   switch (err) {
@@ -753,6 +770,7 @@ Error ErrnoMatch(errno_t err) {
   }
   return FILE_ACCESS_DENIED;
 }
+#endif
 
 String ErrToStr(errno_t err) {
   switch (err) {
@@ -895,14 +913,37 @@ void *Realloc(void *block, size_t size) {
 }
 
 void Free(void *address) {
-  Assert(address != NULL, "Free: address should never be null");
   free(address);
 }
 
 /* --- String Implementation --- */
 static size_t max_string_size = 10000;
+String s(char *msg) {
+  if (msg == NULL) {
+    return (String){0};
+  }
 
-static size_t strLength(char *str, size_t maxSize) {
+  return (String){
+    .length = strlen(msg),
+    .data = msg,
+  };
+}
+
+String F(Arena *arena, const char *format, ...) {
+  va_list args;
+  va_start(args, format);
+  size_t size = vsnprintf(NULL, 0, format, args) + 1; // +1 for null terminator
+  va_end(args);
+
+  char *buffer = ArenaAllocChars(arena, size);
+  va_start(args, format);
+  vsnprintf(buffer, size, format, args);
+  va_end(args);
+
+  return (String){.length = size - 1, .data = buffer};
+}
+
+static size_t str_len(char *str, size_t maxSize) {
   if (str == NULL) {
     return 0;
   }
@@ -915,16 +956,25 @@ static size_t strLength(char *str, size_t maxSize) {
   return len;
 }
 
-static void addNullTerminator(char *str, size_t len) {
+static void add_null_terminator(char *str, size_t len) {
   str[len] = '\0';
-}
-
-bool StrIsNull(String str) {
-  return str.data == NULL;
 }
 
 void SetMaxStrSize(size_t size) {
   max_string_size = size;
+}
+
+String StrNew(Arena *arena, char *str) {
+  const size_t len = str_len(str, max_string_size);
+  if (len == 0) {
+    return (String){0};
+  }
+  size_t memory_size = sizeof(char) * len + 1; // NOTE: Includes null terminator
+  char *allocated_str = ArenaAllocChars(arena, memory_size);
+
+  memcpy(allocated_str, str, memory_size);
+  add_null_terminator(allocated_str, len);
+  return (String){len, allocated_str};
 }
 
 String StrNewSize(Arena *arena, char *str, size_t len) {
@@ -934,32 +984,32 @@ String StrNewSize(Arena *arena, char *str, size_t len) {
   char *allocated_str = ArenaAllocChars(arena, memory_size);
 
   memcpy(allocated_str, str, len);
-  addNullTerminator(allocated_str, len);
+  add_null_terminator(allocated_str, len);
   return (String){len, allocated_str};
 }
 
-String StrNew(Arena *arena, char *str) {
-  const size_t len = strLength(str, max_string_size);
-  if (len == 0) {
-    return (String){0};
-  }
-  size_t memory_size = sizeof(char) * len + 1; // NOTE: Includes null terminator
-  char *allocated_str = ArenaAllocChars(arena, memory_size);
+void StrCopy(String *destination, String source) {
+  Assert(!StrIsNull(*destination), "StrCopy: destination should never be NULL");
+  Assert(!StrIsNull(source), "StrCopy: source should never be NULL");
+  Assert(destination->length >= source.length, "destination length should never smaller than source length");
 
-  memcpy(allocated_str, str, memory_size);
-  addNullTerminator(allocated_str, len);
-  return (String){len, allocated_str};
+  errno_t err = memcpy_s(destination->data, destination->length + 1, source.data, source.length);
+  Assert(err == SUCCESS, "StrCopy: memcpy_s failed, err: %d", err);
+
+  destination->length = source.length;
+  add_null_terminator(destination->data, destination->length);
 }
 
-String s(char *msg) {
-  if (msg == NULL) {
-    return (String){0};
+bool StrEq(String string1, String string2) {
+  if (string1.length != string2.length) {
+    return false;
   }
 
-  return (String){
-    .length = strlen(msg),
-    .data = msg,
-  };
+  if (memcmp(string1.data, string2.data, string1.length) != 0) {
+    return false;
+  }
+
+  return true;
 }
 
 String StrConcat(Arena *arena, String string1, String string2) {
@@ -971,7 +1021,7 @@ String StrConcat(Arena *arena, String string1, String string2) {
     errno_t err = memcpy_s(allocatedString, memorySize, string2.data, string2.length);
     Assert(err == SUCCESS, "StrConcat: memcpy_s failed, err: %d", err);
 
-    addNullTerminator(allocatedString, len);
+    add_null_terminator(allocatedString, len);
     return (String){len, allocatedString};
   }
 
@@ -982,7 +1032,7 @@ String StrConcat(Arena *arena, String string1, String string2) {
     errno_t err = memcpy_s(allocatedString, memorySize, string1.data, string1.length);
     Assert(err == SUCCESS, "StrConcat: memcpy_s failed, err: %d", err);
 
-    addNullTerminator(allocatedString, len);
+    add_null_terminator(allocatedString, len);
     return (String){len, allocatedString};
   }
 
@@ -996,32 +1046,8 @@ String StrConcat(Arena *arena, String string1, String string2) {
   err = memcpy_s(allocatedString + string1.length, memorySize, string2.data, string2.length);
   Assert(err == SUCCESS, "StrConcat: memcpy_s failed, err: %d", err);
 
-  addNullTerminator(allocatedString, len);
+  add_null_terminator(allocatedString, len);
   return (String){len, allocatedString};
-}
-
-void StrCopy(String *destination, String source) {
-  Assert(!StrIsNull(*destination), "StrCopy: destination should never be NULL");
-  Assert(!StrIsNull(source), "StrCopy: source should never be NULL");
-  Assert(destination->length >= source.length, "destination length should never smaller than source length");
-
-  errno_t err = memcpy_s(destination->data, destination->length + 1, source.data, source.length);
-  Assert(err == SUCCESS, "StrCopy: memcpy_s failed, err: %d", err);
-
-  destination->length = source.length;
-  addNullTerminator(destination->data, destination->length);
-}
-
-bool StrEq(String string1, String string2) {
-  if (string1.length != string2.length) {
-    return false;
-  }
-
-  if (memcmp(string1.data, string2.data, string1.length) != 0) {
-    return false;
-  }
-
-  return true;
 }
 
 StringVector StrSplit(Arena *arena, String str, String delimiter) {
@@ -1079,7 +1105,11 @@ void StrToLower(String str) {
   }
 }
 
-static bool isSpace(char character) {
+bool StrIsNull(String str) {
+  return str.data == NULL;
+}
+
+static bool is_space(char character) {
   return character == ' ' || character == '\n' || character == '\t' || character == '\r';
 }
 
@@ -1092,7 +1122,7 @@ void StrTrim(String *str) {
   char *last_char = NULL;
   for (size_t i = 0; i < str->length; ++i) {
     char *curr_char = &str->data[i];
-    if (isSpace(*curr_char)) {
+    if (is_space(*curr_char)) {
       continue;
     }
 
@@ -1106,13 +1136,13 @@ void StrTrim(String *str) {
   if (first_char == NULL || last_char == NULL) {
     str->data[0] = '\0';
     str->length = 0;
-    addNullTerminator(str->data, 0);
+    add_null_terminator(str->data, 0);
     return;
   }
 
   str->length = (last_char - first_char) + 1;
   memmove(str->data, first_char, str->length);
-  addNullTerminator(str->data, str->length);
+  add_null_terminator(str->data, str->length);
 }
 
 String StrSlice(Arena *arena, String str, size_t start, ssize_t end) {
@@ -1148,20 +1178,6 @@ bool StrIncludes(String source, String subStr) {
   }
 
   return false;
-}
-
-String F(Arena *arena, const char *format, ...) {
-  va_list args;
-  va_start(args, format);
-  size_t size = vsnprintf(NULL, 0, format, args) + 1; // +1 for null terminator
-  va_end(args);
-
-  char *buffer = ArenaAllocChars(arena, size);
-  va_start(args, format);
-  vsnprintf(buffer, size, format, args);
-  va_end(args);
-
-  return (String){.length = size - 1, .data = buffer};
 }
 
 static String normSlashes(String path) {
@@ -1409,30 +1425,13 @@ float32_t RandomFloat(float32_t min, float32_t max) {
 }
 
 /* --- File System Implementation --- */
-static char curr_path[PATH_MAX];
 #  if defined(PLATFORM_WIN)
-static Error WinErrMatch(DWORD err) {
-  switch (err) {
-    case ERROR_FILE_NOT_FOUND:
-    case ERROR_PATH_NOT_FOUND:      return FILE_NOT_FOUND;
-    case ERROR_NOT_ENOUGH_MEMORY:
-    case ERROR_OUTOFMEMORY:         return FILE_NO_MEMORY;
-    case ERROR_ACCESS_DENIED:       return FILE_ACCESS_DENIED;
-    case ERROR_DISK_FULL:           return FILE_DISK_FULL;
-    case ERROR_ALREADY_EXISTS:      return FILE_ALREADY_EXISTS;
-    case ERROR_TOO_MANY_OPEN_FILES: return FILE_TOO_MANY_OPEN;
-    case ERROR_BUFFER_OVERFLOW:     return FILE_PATH_TOO_LONG;
-    case ERROR_DIRECTORY:           return FILE_IS_DIRECTORY;
-    case ERROR_WRITE_PROTECT:       return FILE_READ_ONLY_FS;
-    default:                        return FILE_ACCESS_DENIED;
-  }
-}
-
+static char curr_path[MAX_PATH];
 GetCwdResult GetCwd(void) {
   GetCwdResult result = {0};
   DWORD length = GetCurrentDirectory(MAX_PATH, curr_path);
   if (length == 0) {
-    result.error = WinErrMatch(GetLastError());
+    result.error = ErrnoMatch(GetLastError());
     result.data = S("");
     return result;
   }
@@ -1443,7 +1442,7 @@ GetCwdResult GetCwd(void) {
 
 Error SetCwd(char *destination) {
   if (!SetCurrentDirectory(destination)) {
-    return WinErrMatch(GetLastError());
+    return ErrnoMatch(GetLastError());
   }
   return GetCwd().error;
 }
@@ -1452,7 +1451,7 @@ FileStatsResult FileStats(String path) {
   FileStatsResult result = {0};
   WIN32_FILE_ATTRIBUTE_DATA attr = {0};
   if (!GetFileAttributesExA(path.data, GetFileExInfoStandard, &attr)) {
-    result.error = WinErrMatch(GetLastError());
+    result.error = ErrnoMatch(GetLastError());
     return result;
   }
 
@@ -1483,14 +1482,14 @@ FileReadResult FileRead(Arena *arena, String path, size_t file_size) {
   FileReadResult result = {0};
   HANDLE hFile = CreateFileA(path.data, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
   if (hFile == INVALID_HANDLE_VALUE) {
-    result.error = WinErrMatch(GetLastError());
+    result.error = ErrnoMatch(GetLastError());
     return result;
   }
 
   char *buffer = ArenaAllocChars(arena, file_size + 1);
   DWORD bytes_read;
   if (!ReadFile(hFile, buffer, (DWORD)file_size, &bytes_read, NULL)) {
-    result.error = WinErrMatch(GetLastError());
+    result.error = ErrnoMatch(GetLastError());
   } else if ((size_t)bytes_read != file_size) {
     result.error = FILE_READ_FAILED; // short read
   } else {
@@ -1503,11 +1502,11 @@ FileReadResult FileRead(Arena *arena, String path, size_t file_size) {
 
 Error FileWrite(String path, String data) {
   HANDLE hFile = CreateFileA(path.data, GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
-  if (hFile == INVALID_HANDLE_VALUE) return WinErrMatch(GetLastError());
+  if (hFile == INVALID_HANDLE_VALUE) return ErrnoMatch(GetLastError());
 
   DWORD bytes_written;
   Error err = SUCCESS;
-  if (!WriteFile(hFile, data.data, (DWORD)data.length, &bytes_written, NULL)) err = WinErrMatch(GetLastError());
+  if (!WriteFile(hFile, data.data, (DWORD)data.length, &bytes_written, NULL)) err = ErrnoMatch(GetLastError());
   else if ((size_t)bytes_written != data.length) err = FILE_WRITE_FAILED;
   CloseHandle(hFile);
   return err;
@@ -1515,7 +1514,7 @@ Error FileWrite(String path, String data) {
 
 Error FileAdd(String path, String data) {
   HANDLE hFile = CreateFileA(path.data, GENERIC_WRITE, 0, NULL, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
-  if (hFile == INVALID_HANDLE_VALUE) return WinErrMatch(GetLastError());
+  if (hFile == INVALID_HANDLE_VALUE) return ErrnoMatch(GetLastError());
   if (SetFilePointer(hFile, 0, NULL, FILE_END) == INVALID_SET_FILE_POINTER) {
     CloseHandle(hFile);
     return FILE_ACCESS_DENIED;
@@ -1523,19 +1522,19 @@ Error FileAdd(String path, String data) {
 
   DWORD bytes_written;
   Error err = SUCCESS;
-  if (!WriteFile(hFile, data.data, (DWORD)data.length, &bytes_written, NULL)) err = WinErrMatch(GetLastError());
+  if (!WriteFile(hFile, data.data, (DWORD)data.length, &bytes_written, NULL)) err = ErrnoMatch(GetLastError());
   else if ((size_t)bytes_written != data.length) err = FILE_WRITE_FAILED;
   CloseHandle(hFile);
   return err;
 }
 
 Error FileDelete(String path) {
-  if (!DeleteFileA(path.data)) return WinErrMatch(GetLastError());
+  if (!DeleteFileA(path.data)) return ErrnoMatch(GetLastError());
   return SUCCESS;
 }
 
 Error FileRename(String old_path, String new_path) {
-  if (!MoveFileExA(old_path.data, new_path.data, MOVEFILE_REPLACE_EXISTING)) return WinErrMatch(GetLastError());
+  if (!MoveFileExA(old_path.data, new_path.data, MOVEFILE_REPLACE_EXISTING)) return ErrnoMatch(GetLastError());
   return SUCCESS;
 }
 
@@ -1543,7 +1542,7 @@ Error Mkdir(String path) {
   if (CreateDirectoryA(path.data, NULL)) return SUCCESS;
   DWORD err = GetLastError();
   if (err == ERROR_ALREADY_EXISTS) return SUCCESS;
-  return WinErrMatch(err);
+  return ErrnoMatch(err);
 }
 
 ListDirResult ListDir(Arena *arena, String path) {
@@ -1554,7 +1553,7 @@ ListDirResult ListDir(Arena *arena, String path) {
   WIN32_FIND_DATAA find_data;
   HANDLE hFind = FindFirstFileA(search, &find_data);
   if (hFind == INVALID_HANDLE_VALUE) {
-    result.error = WinErrMatch(GetLastError());
+    result.error = ErrnoMatch(GetLastError());
     return result;
   }
 
@@ -1565,26 +1564,26 @@ ListDirResult ListDir(Arena *arena, String path) {
   } while (FindNextFileA(hFind, &find_data));
   DWORD err = GetLastError();
 
-  if (err != ERROR_NO_MORE_FILES) result.error = WinErrMatch(err);
+  if (err != ERROR_NO_MORE_FILES) result.error = ErrnoMatch(err);
   FindClose(hFind);
   return result;
 }
 
 Error FileCopy(String src_path, String dest_path) {
   HANDLE src = CreateFileA(src_path.data, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-  if (src == INVALID_HANDLE_VALUE) return WinErrMatch(GetLastError());
+  if (src == INVALID_HANDLE_VALUE) return ErrnoMatch(GetLastError());
 
   LARGE_INTEGER size;
   if (!GetFileSizeEx(src, &size)) {
     CloseHandle(src);
-    return WinErrMatch(GetLastError());
+    return ErrnoMatch(GetLastError());
   }
 
   HANDLE dest = CreateFileA(dest_path.data, GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
   if (dest == INVALID_HANDLE_VALUE) {
     DWORD err = GetLastError();
     CloseHandle(src);
-    return WinErrMatch(err);
+    return ErrnoMatch(err);
   }
 
   char buffer[8192];
@@ -1592,7 +1591,7 @@ Error FileCopy(String src_path, String dest_path) {
   Error err = SUCCESS;
   while (ReadFile(src, buffer, sizeof(buffer), &bytes_read, NULL) && bytes_read > 0) {
     if (!WriteFile(dest, buffer, bytes_read, &bytes_written, NULL)) {
-      err = WinErrMatch(GetLastError());
+      err = ErrnoMatch(GetLastError());
       break;
     } else if (bytes_written != bytes_read) {
       err = FILE_WRITE_FAILED;
@@ -1601,7 +1600,7 @@ Error FileCopy(String src_path, String dest_path) {
   }
 
   if (err == SUCCESS && GetLastError() != ERROR_SUCCESS && GetLastError() != ERROR_HANDLE_EOF) {
-    err = WinErrMatch(GetLastError());
+    err = ErrnoMatch(GetLastError());
   }
   CloseHandle(src);
   CloseHandle(dest);
@@ -1610,6 +1609,7 @@ Error FileCopy(String src_path, String dest_path) {
   return err;
 }
 #  else
+static char curr_path[PATH_MAX];
 GetCwdResult GetCwd(void) {
   GetCwdResult result = {0};
   if (getcwd(curr_path, sizeof(curr_path)) == NULL) {

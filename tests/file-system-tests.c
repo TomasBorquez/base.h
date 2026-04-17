@@ -224,12 +224,15 @@ static void TestFileCopy(void) {
     TEST_ASSERT(FileCopy(S("non-existent.txt"), S("dest.txt")) == FILE_NOT_FOUND, "Should return FILE_NOT_FOUND for non-existent source");
     TEST_ASSERT(FileCopy(S("source.txt"), S("")) != SUCCESS, "Should fail when copying to empty path");
 
-    String filesToDelete[] = {
-      S("source.txt"), S("destination.txt"), S("copy-test-dir/copied.txt"),
-      S("empty-source.txt"), S("empty-dest.txt"),
-    };
-    for (size_t i = 0; i < ARR_LEN(filesToDelete); i++) {
-      TEST_ASSERT(FileDelete(filesToDelete[i]) == SUCCESS, "Should not fail when deleting files");
+    String files_to_delete[5] = {0};
+    files_to_delete[0] = S("source.txt");
+    files_to_delete[1] = S("destination.txt");
+    files_to_delete[2] = S("copy-test-dir/copied.txt");
+    files_to_delete[3] = S("empty-source.txt");
+    files_to_delete[4] = S("empty-dest.txt");
+
+    for (size_t i = 0; i < ARR_LEN(files_to_delete); i++) {
+      TEST_ASSERT(FileDelete(files_to_delete[i]) == SUCCESS, "Should not fail when deleting files");
     }
 
     ArenaFree(arena);
