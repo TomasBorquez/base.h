@@ -38,4 +38,16 @@
 - [x] Move private functions to `__base_` and snake_case
 - [x] Add tests script for local dev
 - [x] Add `StrIncludes`
+- [x] Fix UB error in VecForEach
+- [x] Move ARR_LEN() to base.h
+- [x] Move to result struct:
+    - [x] Macro that creates struct with struct result, and enum success
+    - [x] Move all Linux file operations to this pattern
+    - [x] Move all Windows file operations to this pattern
+- [x] Add compiler hints to arena
+- [x] Simplify StringBuilderAppend pattern
+- [ ] F() -> StringBuilderAppendF with custom fast formatting
+- [ ] Path handling is pretty ugly, improve it
+
+- [ ] Custom printf function for loggers
 - [ ] Add generic HashMap

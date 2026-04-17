@@ -3,10 +3,10 @@ set -u
 
 TESTS=(
   "arena-tests"
-  "file-system-tests"
-  "ini-parser-tests"
   "string-tests"
   "vector-tests"
+  "ini-parser-tests"
+  "file-system-tests"
 )
 
 if [ $# -lt 1 ]; then
@@ -46,7 +46,7 @@ fi
 for test in "${TESTS[@]}"; do
   echo "Running $test with $COMPILER..."
 
-  if ! "$COMPILER" -Wall -g3 -fsanitize=address,undefined "${test}.c" -o "${test}${EXE}" -lm; then
+  if ! "$COMPILER" -Wall -g3 -fsanitize=address,undefined -Wno-unused-function "${test}.c" -o "${test}${EXE}" -lm; then
     echo "Compilation of $test failed"
     cleanup
     exit 1

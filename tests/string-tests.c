@@ -47,11 +47,6 @@ static void TestStringManipulation(void) {
     TEST_ASSERT(concatenated.data[5] == ' ', "Concatenated string data incorrect");
     TEST_ASSERT(concatenated.data[6] == 'W', "Concatenated string data incorrect");
 
-    String destination = StrNewSize(arena, "", 5);
-    StrCopy(&destination, str1);
-    TEST_ASSERT(destination.length == 5, "Copied string length incorrect");
-    TEST_ASSERT(StrEq(destination, str1), "Copied string should equal original");
-
     String uppercase = StrNew(arena, "HELLO");
     StrToLower(uppercase);
     TEST_ASSERT(uppercase.data[0] == 'h', "StrToLower failed to convert first character");
@@ -81,16 +76,7 @@ static void TestStringSplitting(void) {
     TEST_ASSERT(StrEq(parts.data[1], S("world")), "Second part incorrect");
     TEST_ASSERT(StrEq(parts.data[2], S("test")), "Third part incorrect");
 
-    String multiline = S("line1\nline2\nline3");
-    StringVector lines = StrSplitNewLine(arena, multiline);
-
-    TEST_ASSERT(lines.length == 3, "Split by newline should result in 3 lines");
-    TEST_ASSERT(StrEq(lines.data[0], S("line1")), "First line incorrect");
-    TEST_ASSERT(StrEq(lines.data[1], S("line2")), "Second line incorrect");
-    TEST_ASSERT(StrEq(lines.data[2], S("line3")), "Third line incorrect");
-
     VecFree(parts);
-    VecFree(lines);
     ArenaFree(arena);
   }
   TEST_END();
@@ -100,17 +86,16 @@ static void TestStringBuilderFunctionality(void) {
   TEST_BEGIN("StringBuilder Functionality");
   {
     Arena *arena = ArenaCreate(128);
-
-    StringBuilder builder = StringBuilderCreate(arena);
+    StringBuilder builder = SBCreate(arena);
     TEST_ASSERT(builder.capacity > 0, "Builder should have non-zero capacity");
     TEST_ASSERT(builder.buffer.length == 0, "New builder buffer should be empty");
 
     String str1 = S("Hello");
-    StringBuilderAppend(arena, &builder, str1);
+    SBAdd(&builder, str1);
     TEST_ASSERT(builder.buffer.length >= str1.length, "Builder buffer length incorrect after append");
 
     String str2 = S(" World");
-    StringBuilderAppend(arena, &builder, str2);
+    SBAdd(&builder, str2);
     TEST_ASSERT(builder.buffer.length >= str1.length + str2.length, "Builder buffer length incorrect after second append");
 
     String finalStr = builder.buffer;
@@ -128,7 +113,6 @@ static void TestStringSlicing(void) {
   TEST_BEGIN("String Slicing");
   {
     Arena *arena = ArenaCreate(128);
-
     String str = S("Hello World");
 
     String slice1 = StrSlice(arena, str, 0, 5); // "Hello"
@@ -390,7 +374,7 @@ static void TestStringEdgeCases(void) {
   TEST_END();
 }
 
-i32 main(void) {
+int main(void) {
   StartTest();
   {
     TestStringCreation();

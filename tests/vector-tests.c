@@ -190,7 +190,7 @@ static void TestSort(void) {
   TEST_END();
 }
 
-i32 main(void) {
+int32_t main(void) {
   StartTest();
   {
     TestForEach();
