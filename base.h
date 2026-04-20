@@ -1,7 +1,7 @@
 /* MIT License
 
   base.h - Better cross-platform STD
-  Version - 2026-04-17 (0.2.6):
+  Version - 2026-04-20 (0.2.7):
   https://github.com/TomasBorquez/base.h
 
   Usage:
@@ -356,7 +356,7 @@ void SBAdd(StringBuilder *builder, String string);
 void SBAddF(StringBuilder *builder, char *fmt, ...);
 void SBAddFormatV(StringBuilder *builder, char *fmt, va_list args);
 
-#define SBAddS(builder, string) SBAdd(builder, S(string));
+#define SBAddS(builder, string) SBAdd(builder, S(string))
 
 /* --- Random --- */
 void RandomInit(void);
