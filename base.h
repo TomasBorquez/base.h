@@ -150,6 +150,7 @@
 /* Process/Threading */
 #  define sleep(x) Sleep((x) * 1000)
 #  define usleep(x) Sleep((x) / 1000)
+#  define pclose _pclose
 
 /* Some functions need complete replacements */
 #  if defined(COMPILER_MSVC)
