@@ -87,23 +87,85 @@ static void TestStringBuilderFunctionality(void) {
   {
     Arena *arena = ArenaCreate(128);
     StringBuilder builder = SBCreate(arena);
-    TEST_ASSERT(builder.capacity > 0, "Builder should have non-zero capacity");
-    TEST_ASSERT(builder.buffer.length == 0, "New builder buffer should be empty");
+    TEST_ASSERT(builder.capacity > 0, "builder should have non-zero capacity");
+    TEST_ASSERT(builder.buffer.length == 0, "new builder buffer should be empty");
 
     String str1 = S("Hello");
     SBAdd(&builder, str1);
-    TEST_ASSERT(builder.buffer.length >= str1.length, "Builder buffer length incorrect after append");
+    TEST_ASSERT(builder.buffer.length >= str1.length, "builder buffer length incorrect after append");
 
     String str2 = S(" World");
     SBAdd(&builder, str2);
-    TEST_ASSERT(builder.buffer.length >= str1.length + str2.length, "Builder buffer length incorrect after second append");
+    TEST_ASSERT(builder.buffer.length >= str1.length + str2.length, "builder buffer length incorrect after second append");
 
-    String finalStr = builder.buffer;
-    TEST_ASSERT(finalStr.length == str1.length + str2.length, "Final builder string length incorrect");
-    TEST_ASSERT(finalStr.data[0] == 'H', "Final builder string data incorrect");
-    TEST_ASSERT(finalStr.data[5] == ' ', "Final builder string data incorrect");
-    TEST_ASSERT(finalStr.data[6] == 'W', "Final builder string data incorrect");
+    String final_str = builder.buffer;
+    TEST_ASSERT(final_str.length == str1.length + str2.length, "final builder string length incorrect");
+    TEST_ASSERT(final_str.data[0] == 'H', "final builder string data incorrect");
+    TEST_ASSERT(final_str.data[5] == ' ', "final builder string data incorrect");
+    TEST_ASSERT(final_str.data[6] == 'W', "final builder string data incorrect");
 
+    ArenaFree(arena);
+  }
+  TEST_END();
+}
+
+static void TestStringBuilderFormat(void) {
+  TEST_BEGIN("StringBuilder Format");
+  {
+    Arena *arena = ArenaCreate(256);
+    StringBuilder builder = SBCreate(arena);
+    SBAddF(&builder, "%s %S", "hello", S("world"));
+    TEST_ASSERT(builder.buffer.length == 11, "%s and %S length incorrect");
+    TEST_ASSERT(StrEq(builder.buffer, S("hello world")), "%s and %S content incorrect");
+    ArenaFree(arena);
+  }
+  {
+    Arena *arena = ArenaCreate(256);
+    StringBuilder builder = SBCreate(arena);
+    SBAddF(&builder, "%d", (int32_t)42);
+    TEST_ASSERT(StrEq(builder.buffer, S("42")), "%d positive incorrect");
+    ArenaFree(arena);
+  }
+  {
+    Arena *arena = ArenaCreate(256);
+    StringBuilder builder = SBCreate(arena);
+    SBAddF(&builder, "%d", (int32_t)-99);
+    TEST_ASSERT(StrEq(builder.buffer, S("-99")), "%d negative incorrect");
+    ArenaFree(arena);
+  }
+  {
+    Arena *arena = ArenaCreate(256);
+    StringBuilder builder = SBCreate(arena);
+    SBAddF(&builder, "%ud", (uint32_t)UINT32_MAX);
+    TEST_ASSERT(StrEq(builder.buffer, S("4294967295")), "%ud max u32 incorrect");
+    ArenaFree(arena);
+  }
+  {
+    Arena *arena = ArenaCreate(256);
+    StringBuilder builder = SBCreate(arena);
+    SBAddF(&builder, "%l", (int64_t)-INT64_MAX);
+    TEST_ASSERT(StrEq(builder.buffer, S("-9223372036854775807")), "%l min i64 incorrect");
+    ArenaFree(arena);
+  }
+  {
+    Arena *arena = ArenaCreate(256);
+    StringBuilder builder = SBCreate(arena);
+    SBAddF(&builder, "%ul", (uint64_t)UINT64_MAX);
+    TEST_ASSERT(StrEq(builder.buffer, S("18446744073709551615")), "%ul max u64 incorrect");
+    ArenaFree(arena);
+  }
+  {
+    Arena *arena = ArenaCreate(256);
+    StringBuilder builder = SBCreate(arena);
+    SBAddF(&builder, "%s=%d,ul=%ul", "x", (int32_t)-1, (uint64_t)99);
+    TEST_ASSERT(StrEq(builder.buffer, S("x=-1,ul=99")), "mixed format incorrect");
+    ArenaFree(arena);
+  }
+  {
+    Arena *arena = ArenaCreate(256);
+    StringBuilder builder = SBCreate(arena);
+    SBAddF(&builder, "%d %l %ud %ul", (int32_t)0, (int64_t)0, (uint32_t)0, (uint64_t)0);
+    TEST_ASSERT(StrEq(builder.buffer, S("0 0 0 0")), "zero values incorrect");
     ArenaFree(arena);
   }
   TEST_END();
@@ -306,22 +368,6 @@ static void TestPathNormalization(void) {
   TEST_END();
 }
 
-static void TestStringVectorFunctionality(void) {
-  TEST_BEGIN("StringVector Functionality");
-  {
-    StringVector vector = {0};
-    StringVectorPushMany(vector, "item1", "item2", "item3");
-
-    TEST_ASSERT(vector.length == 3, "Vector should have 3 items");
-    TEST_ASSERT(StrEq(vector.data[0], S("item1")), "First vector item incorrect");
-    TEST_ASSERT(StrEq(vector.data[1], S("item2")), "Second vector item incorrect");
-    TEST_ASSERT(StrEq(vector.data[2], S("item3")), "Third vector item incorrect");
-
-    VecFree(vector);
-  }
-  TEST_END();
-}
-
 static void TestStringIncludes(void) {
   TEST_BEGIN("String Includes");
   {
@@ -382,9 +428,9 @@ int main(void) {
     TestStringManipulation();
     TestStringSplitting();
     TestStringBuilderFunctionality();
+    TestStringBuilderFormat();
     TestStringSlicing();
     TestPathNormalization();
-    TestStringVectorFunctionality();
     TestStringIncludes();
     TestStringEdgeCases();
   }

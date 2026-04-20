@@ -13,12 +13,12 @@
 #pragma once
 
 /* --- Platform MACROS and includes --- */
-#if defined(__clang__)
+#if defined(__GNUC__)
+#  define COMPILER_GCC
+#elif defined(__clang__)
 #  define COMPILER_CLANG
 #elif defined(_MSC_VER)
 #  define COMPILER_MSVC
-#elif defined(__GNUC__)
-#  define COMPILER_GCC
 #elif defined(__TINYC__)
 #  define COMPILER_TCC
 #else
@@ -318,15 +318,6 @@ String s(char *msg);
 String F(Arena *arena, const char *format, ...) FORMAT_CHECK(2, 3);
 
 VEC_TYPE(StringVector, String);
-#define StringVectorPushMany(vector, ...)              \
-  do {                                                 \
-    char *values[] = {__VA_ARGS__};                    \
-    size_t count = sizeof(values) / sizeof(values[0]); \
-    for (size_t i = 0; i < count; i++) {               \
-      String value = s(values[i]);                     \
-      VecPush((vector), value);                        \
-    }                                                  \
-  } while (0)
 
 void SetMaxStrSize(size_t size);
 String StrNew(Arena *arena, char *str);
@@ -344,7 +335,6 @@ bool StrIsNull(String string);
 void StrTrim(String *string);
 
 String StrSlice(Arena *arena, String str, size_t start, ssize_t end);
-
 bool StrIncludes(String source, String subStr);
 
 String NormalizePath(Arena *arena, String path);
@@ -363,6 +353,8 @@ typedef struct {
 StringBuilder SBCreate(Arena *arena);
 StringBuilder SBReserve(Arena *arena, size_t capacity);
 void SBAdd(StringBuilder *builder, String string);
+void SBAddF(StringBuilder *builder, char *fmt, ...);
+void SBAddFormatV(StringBuilder *builder, char *fmt, va_list args);
 
 /* --- Random --- */
 void RandomInit(void);
@@ -382,6 +374,7 @@ typedef struct {
 
 RESULT_TYPE(GetCwdResult, String);
 WARN_UNUSED GetCwdResult GetCwd(void);
+
 WARN_UNUSED Error SetCwd(char *destination);
 WARN_UNUSED Error Mkdir(String path);
 
@@ -487,7 +480,6 @@ bool IniGetBool(IniFile *ini_file, String key);
    https://github.com/TomasBorquez/base.h
 */
 #if defined(BASE_IMPLEMENTATION)
-
 /* --- Vector Implementation --- */
 int32_t __base_vec_partition(void **data, size_t element_size, CompareFunc compare, int32_t low, int32_t high) {
   void *pivot = (char *)(*data) + (high * element_size);
@@ -585,7 +577,7 @@ void __base_vec_insert(void **data, size_t *length, size_t *capacity, size_t ele
 }
 
 void *__base_vec_at(void **data, size_t *length, size_t index, size_t elementSize) {
-  Assert(index >= 0 && index < *length, "VecAt: Index out of bounds");
+  Assert(index < *length, "VecAt: Index out of bounds");
   void *address = (char *)(*data) + (index * elementSize);
   return address;
 }
@@ -1385,6 +1377,126 @@ void SBAdd(StringBuilder *builder, String string) {
   memcpy(builder->buffer.data + builder->buffer.length, string.data, string.length);
   builder->buffer.length = newLength;
   builder->buffer.data[builder->buffer.length] = '\0';
+}
+
+static String string_from_u64(char *buf, size_t buff_size, uint64_t value) {
+  char *end = buf + buff_size;
+  char *p = end;
+  *--p = '\0';
+
+  if (value == 0) {
+    *--p = '0';
+  } else {
+    while (value > 0) {
+      *--p = '0' + (int32_t)(value % 10);
+      value /= 10;
+    }
+  }
+
+  return (String){.data = p, .length = (size_t)(end - p - 1)};
+}
+
+static String string_from_i64(char *buf, size_t buff_size, int64_t value) {
+  int32_t neg = value < 0;
+  uint64_t abs = neg ? -(uint64_t)value : (uint64_t)value;
+
+  char *end = buf + buff_size;
+  char *p = end;
+  *--p = '\0';
+
+  if (abs == 0) {
+    *--p = '0';
+  } else {
+    while (abs > 0) {
+      *--p = '0' + (int)(abs % 10);
+      abs /= 10;
+    }
+  }
+  if (neg) *--p = '-';
+
+  return (String){.data = p, .length = (size_t)(end - p - 1)};
+}
+
+/* Format specifiers:
+*  %s  — char * (null terminated)
+*  %S  — String
+*  %d  — i32
+*  %l  — i64
+*  %ud — u32
+*  %ul — u64
+*/
+void SBAddFormatV(StringBuilder *builder, char *fmt, va_list args) {
+  char *cursor = fmt;
+
+  while (*cursor) {
+    if (*cursor != '%') {
+      char *start = cursor;
+      while (*cursor && *cursor != '%')
+        cursor++;
+
+      SBAdd(builder, (String){.data = (char *)start, .length = (size_t)(cursor - start)});
+      continue;
+    }
+    cursor++;
+
+    bool is_unsigned = false;
+    if (*cursor == 'u') {
+      is_unsigned = true;
+      cursor++;
+    }
+
+    char tmp[32];
+    String segment = {0};
+
+    switch (*cursor++) {
+    case 's': {
+      Assert(!is_unsigned, "%%us is not a valid specifier");
+      char *str = va_arg(args, char *);
+      Assert(str != NULL, "str should never be NULL");
+      segment = (String){.data = (char *)str, .length = strlen(str)};
+    } break;
+    case 'S': {
+      Assert(!is_unsigned, "%%uS is not a valid specifier");
+      segment = va_arg(args, String);
+      Assert(!StrIsNull(segment), "String should never be NULL");
+    } break;
+    case 'd': {
+      if (is_unsigned) {
+        uint32_t v = va_arg(args, uint32_t);
+        segment = string_from_u64(tmp, sizeof(tmp), (uint64_t)v);
+      } else {
+        int32_t v = va_arg(args, int32_t);
+        segment = string_from_i64(tmp, sizeof(tmp), (int64_t)v);
+      }
+    } break;
+    case 'l': {
+      if (is_unsigned) {
+        uint64_t v = va_arg(args, uint64_t);
+        segment = string_from_u64(tmp, sizeof(tmp), (uint64_t)v);
+      } else {
+        int64_t v = va_arg(args, int64_t);
+        segment = string_from_i64(tmp, sizeof(tmp), v);
+      }
+    } break;
+    case '%': {
+      Assert(!is_unsigned, "%%u%% is not a valid specifier");
+      segment = (String){.data = "%", .length = 1};
+    } break;
+    default:
+      Unreachable("SBAddFormatV: unknown format specifier");
+    }
+
+    if (segment.length > 0) {
+      SBAdd(builder, segment);
+    }
+  }
+}
+
+void SBAddF(StringBuilder *builder, char *fmt, ...) {
+    va_list args;
+    va_start(args, fmt);
+    SBAddFormatV(builder, fmt, args);
+    va_end(args);
 }
 
 /* --- Random Implemenation --- */

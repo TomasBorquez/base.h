@@ -46,7 +46,7 @@
     - [x] Move all Windows file operations to this pattern
 - [x] Add compiler hints to arena
 - [x] Simplify StringBuilderAppend pattern
-- [ ] F() -> StringBuilderAppendF with custom fast formatting
+- [x] F() -> StringBuilderAppendF with custom fast formatting
 - [ ] Path handling is pretty ugly, improve it
 
 - [ ] Custom printf function for loggers
