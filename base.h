@@ -356,6 +356,8 @@ void SBAdd(StringBuilder *builder, String string);
 void SBAddF(StringBuilder *builder, char *fmt, ...);
 void SBAddFormatV(StringBuilder *builder, char *fmt, va_list args);
 
+#define SBAddS(builder, string) SBAdd(builder, S(string));
+
 /* --- Random --- */
 void RandomInit(void);
 uint64_t RandomGetSeed(void);

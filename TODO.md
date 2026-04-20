@@ -47,6 +47,7 @@
 - [x] Add compiler hints to arena
 - [x] Simplify StringBuilderAppend pattern
 - [x] F() -> StringBuilderAppendF with custom fast formatting
+- [x] SBAddS for automatic String
 - [ ] Path handling is pretty ugly, improve it
 
 - [ ] Custom printf function for loggers
