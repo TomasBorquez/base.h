@@ -26,6 +26,7 @@
 #endif
 
 #if defined(COMPILER_GCC) || defined(COMPILER_CLANG)
+#  define GCC_VERSION (__GNUC__ * 100 + __GNUC_MINOR__)
 #  define NORETURN __attribute__((noreturn))
 #  define RETURNS_NON_NULL __attribute__((returns_nonnull))
 #  define PARAM_NON_NULL __attribute__((nonnull))
@@ -36,6 +37,13 @@
 #  define UNLIKELY(x) __builtin_expect(!!(x), 0)
 #  define FORMAT_CHECK(fmt_pos, args_pos) __attribute__((format(printf, fmt_pos, args_pos)))
 #  define WARN_UNUSED __attribute__((warn_unused_result))
+
+#  if (GCC_VERSION >= 1100)
+#    define ATTR_MALLOC_DEALLOC(fn) __attribute__((malloc(fn, 1)))
+#  else
+#    define ATTR_MALLOC_DEALLOC(fn)
+#  endif
+
 #elif defined(COMPILER_MSVC)
 #  define NORETURN __declspec(noreturn)
 #  define RETURNS_NON_NULL
@@ -47,6 +55,8 @@
 #  define UNLIKELY(x) x
 #  define FORMAT_CHECK(fmt_pos, args_pos)
 #  define WARN_UNUSED _Check_return_
+
+#  define ATTR_MALLOC_DEALLOC(fn)
 #else
 #  define NORETURN __declspec(noreturn)
 #  define RETURNS_NON_NULL
@@ -58,6 +68,8 @@
 #  define UNLIKELY(x) x
 #  define FORMAT_CHECK(fmt_pos, args_pos)
 #  define WARN_UNUSED
+
+#  define ATTR_MALLOC_DEALLOC(fn)
 #endif
 
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32__)
