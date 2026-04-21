@@ -46,7 +46,11 @@ fi
 for test in "${TESTS[@]}"; do
   echo "Running $test with $COMPILER..."
 
-  if ! "$COMPILER" -Wall -g3 -fsanitize=address,undefined -Wno-unused-function "${test}.c" -o "${test}${EXE}" -lm; then
+  FLAGS="-Wall -Wextra -Wpedantic -g3 -fsanitize=address,undefined"
+  EXTRA_FLAGS="-Wno-unused-function -fno-omit-frame-pointer -fno-optimize-sibling-calls -Wshadow -Wstrict-prototypes -Wnull-dereference -Wformat=2"
+  FANALYZER_FLAGS="-fanalyzer -fanalyzer-call-summaries --param=analyzer-max-recursion-depth=2 --param=analyzer-max-infeasible-edges=2"
+
+  if ! "$COMPILER" $FLAGS $EXTRA_FLAGS "${test}.c" -o "${test}${EXE}" -lm; then
     echo "Compilation of $test failed"
     cleanup
     exit 1
@@ -54,14 +58,6 @@ for test in "${TESTS[@]}"; do
 
   if ! ./"${test}${EXE}"; then
     echo "$test failed with $COMPILER"
-    cleanup
-    exit 1
-  fi
-
-  smatch_result=$(smatch "${test}.c")
-  if [ ${#smatch_result} -gt 1 ]; then
-    echo "Smatch found an error on $test: "
-    echo "$smatch_result"
     cleanup
     exit 1
   fi

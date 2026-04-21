@@ -302,12 +302,10 @@ typedef struct {
   __ArenaChunk *current;
   size_t offset;
   __ArenaChunk *root;
-  size_t chunkSize;
+  size_t chunk_size;
 } Arena;
 
 #define DEFAULT_ALIGNMENT (2 * sizeof(void *))
-
-Arena *ArenaCreate(size_t chunkSize); // TODO: add allocation hint
 
 ALLOC_ATTR(2) void *ArenaAlloc(Arena *arena, size_t size);
 ALLOC_ATTR(2) char *ArenaAllocChars(Arena *arena, size_t count);
@@ -315,6 +313,8 @@ ALLOC_ATTR2(2, 3) void *ArenaAllocAligned(Arena *arena, size_t size, size_t alig
 
 void ArenaFree(Arena *arena) PARAM_NON_NULL;
 void ArenaReset(Arena *arena) PARAM_NON_NULL;
+
+Arena *ArenaCreate(size_t chunk_size) ATTR_MALLOC_DEALLOC(ArenaFree);
 
 /* --- Memory Allocations --- */
 void *Realloc(void *block, size_t size) RETURNS_NON_NULL;
@@ -350,13 +350,6 @@ void StrTrim(String *string);
 
 String StrSlice(Arena *arena, String str, size_t start, ssize_t end);
 bool StrIncludes(String source, String subStr);
-
-String NormalizePath(Arena *arena, String path);
-String NormalizeExePath(Arena *arena, String path);
-String NormalizeExtension(Arena *arena, String path);
-String NormalizeStaticLibPath(Arena *arena, String path);
-String NormalizePathStart(Arena *arena, String path);
-String NormalizePathEnd(Arena *arena, String path);
 
 typedef struct {
   size_t capacity;
@@ -722,14 +715,14 @@ int64_t TimeNow(void) {
   li.HighPart = ft.dwHighDateTime;
   // Convert Windows FILETIME (100-nanosecond intervals since January 1, 1601)
   // to UNIX timestamp in milliseconds
-  int64_t currentTime = (li.QuadPart - 116444736000000000LL) / 10000;
+  int64_t current_time = (li.QuadPart - 116444736000000000LL) / 10000;
 #  else
   struct timespec ts;
   clock_gettime(CLOCK_REALTIME, &ts);
-  int64_t currentTime = (ts.tv_sec * 1000LL) + (ts.tv_nsec / 1000000LL);
+  int64_t current_time = (ts.tv_sec * 1000LL) + (ts.tv_nsec / 1000000LL);
 #  endif
-  Assert(currentTime != -1, "TimeNow: currentTime should never be -1");
-  return currentTime;
+  Assert(current_time != -1, "TimeNow: current_time should never be -1");
+  return current_time;
 }
 
 void WaitTime(int64_t ms) {
@@ -758,8 +751,8 @@ Error ErrnoMatch(errno_t err) {
     case ERROR_BUFFER_OVERFLOW:     return FILE_PATH_TOO_LONG;
     case ERROR_DIRECTORY:           return FILE_IS_DIRECTORY;
     case ERROR_WRITE_PROTECT:       return FILE_READ_ONLY_FS;
-    default:                        return FILE_ACCESS_DENIED;
   }
+  return FILE_ACCESS_DENIED;
 }
 #else
 Error ErrnoMatch(errno_t err) {
@@ -782,16 +775,16 @@ Error ErrnoMatch(errno_t err) {
 
 String ErrToStr(errno_t err) {
   switch (err) {
-    case FILE_ACCESS_DENIED: return S("File access denied");
-    case FILE_NOT_FOUND: return S("File not found");
-    case FILE_NO_MEMORY: return S("File no memory");
-    case FILE_DISK_FULL: return S("File disk full");
-    case FILE_READ_FAILED: return S("File read Failed");
-    case FILE_WRITE_FAILED: return S("File write failed");
-    case FILE_TOO_MANY_OPEN: return S("File too many open");
-    case FILE_PATH_TOO_LONG: return S("File path too long");
-    case FILE_IS_DIRECTORY: return S("File is directory");
-    case FILE_READ_ONLY_FS: return S("File read only FS");
+    case FILE_ACCESS_DENIED:  return S("File access denied");
+    case FILE_NOT_FOUND:      return S("File not found");
+    case FILE_NO_MEMORY:      return S("File no memory");
+    case FILE_DISK_FULL:      return S("File disk full");
+    case FILE_READ_FAILED:    return S("File read Failed");
+    case FILE_WRITE_FAILED:   return S("File write failed");
+    case FILE_TOO_MANY_OPEN:  return S("File too many open");
+    case FILE_PATH_TOO_LONG:  return S("File path too long");
+    case FILE_IS_DIRECTORY:   return S("File is directory");
+    case FILE_READ_ONLY_FS:   return S("File read only FS");
     case FILE_ALREADY_EXISTS: return S("File already exists");
   }
 
@@ -805,7 +798,7 @@ static void _custom_assert(const char *expr, const char *file, unsigned line, co
     va_list args;
     va_start(args, format);
     logErrorV(format, args);
-    va_start(args, format);
+    va_end(args);
   }
 
   abort();
@@ -818,7 +811,7 @@ static void _custom_unreachable(const char *file, unsigned line, const char *for
     va_list args;
     va_start(args, format);
     logErrorV(format, args);
-    va_start(args, format);
+    va_end(args);
   }
 
   abort();
@@ -860,7 +853,7 @@ void *ArenaAllocAligned(Arena *arena, size_t size, size_t al) {
 
   void *result;
   if (arena->offset + size > arena->current->cap) {
-    size_t bytes = size > arena->chunkSize ? size : arena->chunkSize;
+    size_t bytes = size > arena->chunk_size ? size : arena->chunk_size;
     __ArenaNextChunk(arena, bytes);
 
     current_pos = arena->current->buffer;
@@ -894,11 +887,11 @@ void ArenaReset(Arena *arena) {
   arena->offset = 0;
 }
 
-Arena *ArenaCreate(size_t chunkSize) {
+Arena *ArenaCreate(size_t chunk_size) {
   Arena *res = Malloc(sizeof(Arena));
   memset(res, 0, sizeof(*res));
-  res->chunkSize = chunkSize;
-  __ArenaNextChunk(res, chunkSize);
+  res->chunk_size = chunk_size;
+  __ArenaNextChunk(res, chunk_size);
   res->root = res->current;
   return res;
 }
@@ -906,7 +899,6 @@ Arena *ArenaCreate(size_t chunkSize) {
 /* --- Memory Allocations --- */
 void *Malloc(size_t size) {
   Assert(size != 0, "Malloc: size cant be zero");
-
   void *address = malloc(size);
   Assert(address != NULL, "Malloc: failed, returned address should never be NULL");
   return address;
@@ -914,7 +906,6 @@ void *Malloc(size_t size) {
 
 void *Realloc(void *block, size_t size) {
   Assert(size != 0, "Realloc: size cant be zero");
-
   void *address = realloc(block, size);
   Assert(address != NULL, "Realloc: failed, returned address should never be NULL");
   return address;
@@ -951,13 +942,13 @@ String F(Arena *arena, const char *format, ...) {
   return (String){.length = size - 1, .data = buffer};
 }
 
-static size_t str_len(char *str, size_t maxSize) {
+static size_t str_len(char *str, size_t max_size) {
   if (str == NULL) {
     return 0;
   }
 
   size_t len = 0;
-  while (len < maxSize && str[len] != '\0') {
+  while (len < max_size && str[len] != '\0') {
     len++;
   }
 
@@ -1022,40 +1013,40 @@ bool StrEq(String string1, String string2) {
 
 String StrConcat(Arena *arena, String string1, String string2) {
   if (StrIsNull(string1)) {
-    const size_t len = string2.length;
-    const size_t memorySize = sizeof(char) * len + 1;
-    char *allocatedString = ArenaAllocChars(arena, memorySize);
+    size_t len = string2.length;
+    size_t memory_size = sizeof(char) * len + 1;
+    char *allocated_string = ArenaAllocChars(arena, memory_size);
 
-    errno_t err = memcpy_s(allocatedString, memorySize, string2.data, string2.length);
+    errno_t err = memcpy_s(allocated_string, memory_size, string2.data, string2.length);
     Assert(err == SUCCESS, "StrConcat: memcpy_s failed, err: %d", err);
 
-    add_null_terminator(allocatedString, len);
-    return (String){len, allocatedString};
+    add_null_terminator(allocated_string, len);
+    return (String){len, allocated_string};
   }
 
   if (StrIsNull(string2)) {
-    const size_t len = string1.length;
-    const size_t memorySize = sizeof(char) * len + 1;
-    char *allocatedString = ArenaAllocChars(arena, memorySize);
-    errno_t err = memcpy_s(allocatedString, memorySize, string1.data, string1.length);
+    size_t len = string1.length;
+    size_t memory_size = sizeof(char) * len + 1;
+    char *allocated_string = ArenaAllocChars(arena, memory_size);
+    errno_t err = memcpy_s(allocated_string, memory_size, string1.data, string1.length);
     Assert(err == SUCCESS, "StrConcat: memcpy_s failed, err: %d", err);
 
-    add_null_terminator(allocatedString, len);
-    return (String){len, allocatedString};
+    add_null_terminator(allocated_string, len);
+    return (String){len, allocated_string};
   }
 
-  const size_t len = string1.length + string2.length;
-  const size_t memorySize = sizeof(char) * len + 1;
-  char *allocatedString = ArenaAllocChars(arena, memorySize);
+  size_t len = string1.length + string2.length;
+  size_t memory_size = sizeof(char) * len + 1;
+  char *allocated_string = ArenaAllocChars(arena, memory_size);
 
-  errno_t err = memcpy_s(allocatedString, memorySize, string1.data, string1.length);
+  errno_t err = memcpy_s(allocated_string, memory_size, string1.data, string1.length);
   Assert(err == SUCCESS, "StrConcat: memcpy_s failed, err: %d", err);
 
-  err = memcpy_s(allocatedString + string1.length, memorySize, string2.data, string2.length);
+  err = memcpy_s(allocated_string + string1.length, memory_size, string2.data, string2.length);
   Assert(err == SUCCESS, "StrConcat: memcpy_s failed, err: %d", err);
 
-  add_null_terminator(allocatedString, len);
-  return (String){len, allocatedString};
+  add_null_terminator(allocated_string, len);
+  return (String){len, allocated_string};
 }
 
 StringVector StrSplit(Arena *arena, String str, String delimiter) {
@@ -1068,8 +1059,8 @@ StringVector StrSplit(Arena *arena, String str, String delimiter) {
   StringVector result = {0};
   if (delimiter.length == 0) {
     for (size_t i = 0; i < str.length; i++) {
-      String currString = StrNewSize(arena, str.data + i, 1);
-      VecPush(result, currString);
+      String curr_str = StrNewSize(arena, str.data + i, 1);
+      VecPush(result, curr_str);
     }
     return result;
   }
@@ -1084,14 +1075,14 @@ StringVector StrSplit(Arena *arena, String str, String delimiter) {
     }
 
     if (!match) {
-      String currString = StrNewSize(arena, curr, end - curr);
-      VecPush(result, currString);
+      String curr_str = StrNewSize(arena, curr, end - curr);
+      VecPush(result, curr_str);
       break;
     }
 
     size_t len = match - curr;
-    String currString = StrNewSize(arena, curr, len);
-    VecPush(result, currString);
+    String curr_str = StrNewSize(arena, curr, len);
+    VecPush(result, curr_str);
 
     curr = match + delimiter.length;
   }
@@ -1167,196 +1158,25 @@ String StrSlice(Arena *arena, String str, size_t start, ssize_t end) {
   return StrNewSize(arena, str.data + start, len);
 }
 
-bool StrIncludes(String source, String subStr) {
+bool StrIncludes(String source, String sub_str) {
   Assert(!StrIsNull(source), "StrIncludes: source should never be NULL");
-  Assert(!StrIsNull(subStr), "StrIncludes: subStr should never be NULL");
+  Assert(!StrIsNull(sub_str), "StrIncludes: sub_str should never be NULL");
 
-  if (source.length == 0 || subStr.length == 0 || subStr.length > source.length) {
+  if (source.length == 0 || sub_str.length == 0 || sub_str.length > source.length) {
     return false;
   }
 
-  for (size_t i = 0; i <= source.length - subStr.length; i++) {
-    if (source.data[i] != subStr.data[0]) {
+  for (size_t i = 0; i <= source.length - sub_str.length; i++) {
+    if (source.data[i] != sub_str.data[0]) {
       continue;
     }
 
-    if (memcmp(&source.data[i], subStr.data, subStr.length) == 0) {
+    if (memcmp(&source.data[i], sub_str.data, sub_str.length) == 0) {
       return true;
     }
   }
 
   return false;
-}
-
-static String normSlashes(String path) {
-#  if defined(PLATFORM_WIN)
-  for (size_t i = 0; i < path.length; i++) {
-    if (path.data[i] == '/') {
-      path.data[i] = '\\';
-    }
-  }
-#  else
-  for (size_t i = 0; i < path.length; i++) {
-    if (path.data[i] == '\\') {
-      path.data[i] = '/';
-    }
-  }
-#  endif
-  return path;
-}
-
-String NormalizePath(Arena *arena, String path) {
-  String result;
-  if (path.length >= 2 && path.data[0] == '.' && (path.data[1] == '/' || path.data[1] == '\\')) {
-    result = StrNewSize(arena, path.data + 2, path.length - 2);
-  } else {
-    result = StrNewSize(arena, path.data, path.length);
-  }
-
-  return normSlashes(result);
-}
-
-String NormalizeExePath(Arena *arena, String path) {
-  Platform platform = GetPlatform();
-  String result;
-
-  if (path.length >= 2 && path.data[0] == '.' && (path.data[1] == '/' || path.data[1] == '\\')) {
-    result = StrNewSize(arena, path.data + 2, path.length - 2);
-  } else {
-    result = StrNewSize(arena, path.data, path.length);
-  }
-
-  bool hasExe = false;
-  String exeExtension = S(".exe");
-  if (result.length >= exeExtension.length) {
-    String resultEnd = StrSlice(arena, result, result.length - exeExtension.length, result.length);
-    if (StrEq(resultEnd, exeExtension)) {
-      hasExe = true;
-    }
-  }
-
-  if (platform == WINDOWS) {
-    if (!hasExe) {
-      result = StrConcat(arena, result, exeExtension);
-    }
-
-    return normSlashes(result);
-  }
-
-  if (hasExe) {
-    result = StrSlice(arena, result, 0, result.length - exeExtension.length);
-  }
-
-  return normSlashes(result);
-}
-
-String NormalizeExtension(Arena *arena, String path) {
-  String result;
-
-  if (path.length >= 2 && path.data[0] == '.' && (path.data[1] == '/' || path.data[1] == '\\')) {
-    result = StrNewSize(arena, path.data + 2, path.length - 2);
-  } else {
-    result = StrNewSize(arena, path.data, path.length);
-  }
-
-  size_t filenameStart = 0;
-  for (size_t i = 0; i < result.length; i++) {
-    if (result.data[i] == '/' || result.data[i] == '\\') {
-      filenameStart = i + 1;
-    }
-  }
-
-  size_t lastDotIndex = 0;
-  for (size_t i = 0; i < result.length; i++) {
-    if (result.data[i] == '.') {
-      lastDotIndex = i;
-    }
-  }
-
-  if (lastDotIndex <= filenameStart) {
-    return normSlashes(result);
-  }
-
-  result = StrSlice(arena, result, filenameStart, lastDotIndex);
-  return normSlashes(result);
-}
-
-String NormalizeStaticLibPath(Arena *arena, String path) {
-  Platform platform = GetPlatform();
-  String result;
-
-  if (path.length >= 2 && path.data[0] == '.' && (path.data[1] == '/' || path.data[1] == '\\')) {
-    result = StrNewSize(arena, path.data + 2, path.length - 2);
-  } else {
-    result = StrNewSize(arena, path.data, path.length);
-  }
-
-  bool hasLibExt = false;
-  String libExtension;
-  String aExtension = S(".a");
-  String libWinExtension = S(".lib");
-  if (result.length >= aExtension.length) {
-    String resultEnd = StrSlice(arena, result, result.length - aExtension.length, result.length);
-    if (StrEq(resultEnd, aExtension)) {
-      hasLibExt = true;
-      libExtension = aExtension;
-    }
-  }
-
-  if (!hasLibExt && result.length >= libWinExtension.length) {
-    String resultEnd = StrSlice(arena, result, result.length - libWinExtension.length, result.length);
-    if (StrEq(resultEnd, libWinExtension)) {
-      hasLibExt = true;
-      libExtension = libWinExtension;
-    }
-  }
-
-  if (platform == WINDOWS) {
-    if (hasLibExt && !StrEq(libExtension, libWinExtension)) {
-      result = StrSlice(arena, result, 0, result.length - libExtension.length);
-      hasLibExt = false;
-    }
-
-    if (!hasLibExt) {
-      result = StrConcat(arena, result, libWinExtension);
-    }
-
-    return normSlashes(result);
-  }
-
-  if (hasLibExt && !StrEq(libExtension, aExtension)) {
-    result = StrSlice(arena, result, 0, result.length - libExtension.length);
-    hasLibExt = false;
-  }
-
-  if (!hasLibExt) {
-    result = StrConcat(arena, result, aExtension);
-  }
-
-  return normSlashes(result);
-}
-
-String NormalizePathStart(Arena *arena, String path) {
-  String result;
-
-  if (path.length >= 2 && path.data[0] == '.' && (path.data[1] == '/' || path.data[1] == '\\')) {
-    result = StrNewSize(arena, path.data + 2, path.length - 2);
-  } else {
-    result = StrNewSize(arena, path.data, path.length);
-  }
-
-  return result;
-}
-
-String NormalizePathEnd(Arena *arena, String path) {
-  size_t lastSlashIndex = 0;
-  for (size_t i = 0; i < path.length; i++) {
-    if (path.data[i] == '/' || path.data[i] == '\\') {
-      lastSlashIndex = i + 1;
-    }
-  }
-
-  return StrNewSize(arena, path.data + lastSlashIndex, path.length - lastSlashIndex);
 }
 
 StringBuilder SBCreate(Arena *arena) {
@@ -1380,18 +1200,18 @@ StringBuilder SBReserve(Arena *arena, size_t capacity) {
 }
 
 void SBAdd(StringBuilder *builder, String string) {
-  size_t newLength = builder->buffer.length + string.length;
-  if (newLength + 1 >= builder->capacity) {
-    size_t newCapacity = (newLength + 1) * 2;
-    char *data = ArenaAllocChars(builder->arena_builder, newCapacity);
+  size_t new_len = builder->buffer.length + string.length;
+  if (new_len + 1 >= builder->capacity) {
+    size_t new_cap = (new_len + 1) * 2;
+    char *data = ArenaAllocChars(builder->arena_builder, new_cap);
 
     memcpy(data, builder->buffer.data, builder->buffer.length);
     builder->buffer.data = data;
-    builder->capacity = newCapacity;
+    builder->capacity = new_cap;
   }
 
   memcpy(builder->buffer.data + builder->buffer.length, string.data, string.length);
-  builder->buffer.length = newLength;
+  builder->buffer.length = new_len;
   builder->buffer.data[builder->buffer.length] = '\0';
 }
 
@@ -1522,8 +1342,8 @@ uint64_t RandomGetSeed(void) {
   return seed;
 }
 
-void RandomSetSeed(uint64_t newSeed) {
-  seed = newSeed;
+void RandomSetSeed(uint64_t new_seed) {
+  seed = new_seed;
   srand(seed);
 }
 
@@ -2128,9 +1948,9 @@ int64_t IniGetLong(IniFile *ini_file, String key) {
     return 0;
   }
 
-  char *endPtr;
-  int64_t result = strtoll(value.data, &endPtr, 10);
-  if (endPtr == value.data) {
+  char *end_ptr;
+  int64_t result = strtoll(value.data, &end_ptr, 10);
+  if (end_ptr == value.data) {
     LogWarn("IniGetLong: Failed to convert [key: %s, value: %s] to long", key.data, value.data);
     return 0;
   }
@@ -2144,9 +1964,9 @@ float64_t IniGetDouble(IniFile *ini_file, String key) {
     return 0.0;
   }
 
-  char *endPtr;
-  float64_t result = strtod(value.data, &endPtr);
-  if (endPtr == value.data) {
+  char *end_ptr;
+  float64_t result = strtod(value.data, &end_ptr);
+  if (end_ptr == value.data) {
     LogWarn("IniGetLong: Failed to convert [key: %s, value: %s] to double", key.data, value.data);
     return 0.0;
   }

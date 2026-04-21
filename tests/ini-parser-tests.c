@@ -27,8 +27,8 @@ static void TestIniGetString(void) {
     String value2 = IniGet(&ini_file, S("key2"));
     TEST_ASSERT(StrEq(value2, S("value2")), "IniGet key2");
 
-    String valueWithSpaces = IniGet(&ini_file, S("key with spaces"));
-    TEST_ASSERT(StrEq(valueWithSpaces, S("value with spaces")), "IniGet with spaces");
+    String value_with_spaces = IniGet(&ini_file, S("key with spaces"));
+    TEST_ASSERT(StrEq(value_with_spaces, S("value with spaces")), "IniGet with spaces");
 
     IniFree(&ini_file);
   }
@@ -42,17 +42,17 @@ static void TestIniGetTypedValues(void) {
     IniFile ini_file = result.data;
     TEST_ASSERT(result.error == SUCCESS, "IniParse failed");
 
-    int32_t intValue = IniGetInt(&ini_file, S("key3"));
-    TEST_ASSERT(intValue == 123, "IniGetInt");
+    int32_t int_value = IniGetInt(&ini_file, S("key3"));
+    TEST_ASSERT(int_value == 123, "IniGetInt");
 
-    float64_t doubleValue = IniGetDouble(&ini_file, S("key4"));
-    TEST_ASSERT(fabs(doubleValue - 3.14) < 0.0001, "IniGetDouble");
+    float64_t double_value = IniGetDouble(&ini_file, S("key4"));
+    TEST_ASSERT(fabs(double_value - 3.14) < 0.0001, "IniGetDouble");
 
-    bool boolValue = IniGetBool(&ini_file, S("key5"));
-    TEST_ASSERT(boolValue == true, "IniGetBool true");
+    bool bool_value = IniGetBool(&ini_file, S("key5"));
+    TEST_ASSERT(bool_value == true, "IniGetBool true");
 
-    bool boolValue2 = IniGetBool(&ini_file, S("key6"));
-    TEST_ASSERT(boolValue2 == false, "IniGetBool false");
+    bool bool_value2 = IniGetBool(&ini_file, S("key6"));
+    TEST_ASSERT(bool_value2 == false, "IniGetBool false");
 
     IniFree(&ini_file);
   }
@@ -66,8 +66,8 @@ static void TestIniNonExistentKey(void) {
     IniFile ini_file = result.data;
     TEST_ASSERT(result.error == SUCCESS, "IniParse failed");
 
-    String emptyValue = IniGet(&ini_file, S("non_existent_key"));
-    TEST_ASSERT(emptyValue.length == 0 && emptyValue.data == NULL, "IniGet non-existent key");
+    String empty_value = IniGet(&ini_file, S("non_existent_key"));
+    TEST_ASSERT(empty_value.length == 0 && empty_value.data == NULL, "IniGet non-existent key");
 
     IniFree(&ini_file);
   }
@@ -81,17 +81,17 @@ static void TestIniSetValues(void) {
     IniFile ini_file = result.data;
     TEST_ASSERT(result.error == SUCCESS, "IniParse failed");
 
-    String updatedValue = IniSet(&ini_file, S("key1"), S("new_value1"));
-    TEST_ASSERT(StrEq(updatedValue, S("new_value1")), "IniSet update");
+    String updated_value = IniSet(&ini_file, S("key1"), S("new_value1"));
+    TEST_ASSERT(StrEq(updated_value, S("new_value1")), "IniSet update");
 
-    String retrievedUpdatedValue = IniGet(&ini_file, S("key1"));
-    TEST_ASSERT(StrEq(retrievedUpdatedValue, S("new_value1")), "IniGet after update");
+    String retrieved_updated_value = IniGet(&ini_file, S("key1"));
+    TEST_ASSERT(StrEq(retrieved_updated_value, S("new_value1")), "IniGet after update");
 
-    String addedValue = IniSet(&ini_file, S("new_key"), S("new_value"));
-    TEST_ASSERT(StrEq(addedValue, S("new_value")), "IniSet add");
+    String added_value = IniSet(&ini_file, S("new_key"), S("new_value"));
+    TEST_ASSERT(StrEq(added_value, S("new_value")), "IniSet add");
 
-    String retrievedNewValue = IniGet(&ini_file, S("new_key"));
-    TEST_ASSERT(StrEq(retrievedNewValue, S("new_value")), "IniGet after add");
+    String retrieved_new_value = IniGet(&ini_file, S("new_key"));
+    TEST_ASSERT(StrEq(retrieved_new_value, S("new_value")), "IniGet after add");
     TEST_ASSERT(ini_file.entries.length == 8, "IniFile size increased after add");
 
     IniFree(&ini_file);
