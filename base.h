@@ -13,10 +13,10 @@
 #pragma once
 
 /* --- Platform MACROS and includes --- */
-#if defined(__GNUC__)
-#  define COMPILER_GCC
-#elif defined(__clang__)
+#if defined(__clang__)
 #  define COMPILER_CLANG
+#elif defined(__GNUC__)
+#  define COMPILER_GCC
 #elif defined(_MSC_VER)
 #  define COMPILER_MSVC
 #elif defined(__TINYC__)
@@ -162,6 +162,8 @@
 /* Process/Threading */
 #  define sleep(x) Sleep((x) * 1000)
 #  define usleep(x) Sleep((x) / 1000)
+#  define popen _popen
+#  define pclose _pclose
 
 /* Some functions need complete replacements */
 #  if defined(COMPILER_MSVC)
