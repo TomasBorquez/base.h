@@ -1117,30 +1117,26 @@ void StrTrim(String *str) {
     return;
   }
 
-  char *first_char = NULL;
-  char *last_char = NULL;
-  for (size_t i = 0; i < str->length; ++i) {
-    char *curr_char = &str->data[i];
-    if (is_space(*curr_char)) {
-      continue;
-    }
-
-    if (first_char == NULL) {
-      first_char = curr_char;
-    } else {
-      last_char = curr_char;
-    }
+  size_t start = 0;
+  while (start < str->length && is_space(str->data[start])) {
+    start++;
   }
 
-  if (first_char == NULL || last_char == NULL) {
-    str->data[0] = '\0';
-    str->length = 0;
+  if (start == str->length) {
     add_null_terminator(str->data, 0);
+    str->length = 0;
     return;
   }
 
-  str->length = (last_char - first_char) + 1;
-  memmove(str->data, first_char, str->length);
+  size_t end = str->length - 1;
+  while (end > start && is_space(str->data[end])) {
+    end--;
+  }
+
+  str->length = end - start + 1;
+  if (start > 0) {
+    memmove(str->data, &str->data[start], str->length);
+  }
   add_null_terminator(str->data, str->length);
 }
 
