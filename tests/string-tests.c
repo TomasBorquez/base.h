@@ -245,6 +245,11 @@ static void TestStringEdgeCases(void) {
     TEST_ASSERT(whitespace.length == 5, "Trimmed string length incorrect");
     TEST_ASSERT(StrEq(whitespace, S("hello")), "Trimmed string content incorrect");
 
+    String single_letter = StrNew(arena, "  A  ");
+    StrTrim(&single_letter);
+    TEST_ASSERT(single_letter.length == 1, "Trimmed string length incorrect");
+    TEST_ASSERT(StrEq(single_letter, S("A")), "Trimmed string content incorrect");
+
     ArenaFree(arena);
   }
   TEST_END();
