@@ -425,7 +425,7 @@ void logErrorV(const char *format, va_list args) FORMAT_CHECK(1, 0);
     a ^= b;        \
     b ^= a;        \
     a ^= b;        \
-  } while (0);
+  } while (0)
 
 /* --- Defer Macros --- */
 #if defined(DEFER_MACRO)
@@ -659,7 +659,7 @@ bool isUnix(void) {
 }
 
 bool isAndroid(void) {
-#  if defined(PLATFORM_EMSCRIPTEN)
+#  if defined(PLATFORM_ANDROID)
   return true;
 #  else
   return false;
@@ -1931,7 +1931,7 @@ int32_t IniGetInt(IniFile *ini_file, String key) {
   char *end_ptr;
   int32_t result = (int32_t)strtol(value.data, &end_ptr, 10);
   if (end_ptr == value.data) {
-    LogWarn("IniGetLong: Failed to convert [key: %s, value: %s] to int", key.data, value.data);
+    LogWarn("IniGetInt: Failed to convert [key: %s, value: %s] to int", key.data, value.data);
     return 0;
   }
 
@@ -1963,7 +1963,7 @@ float64_t IniGetDouble(IniFile *ini_file, String key) {
   char *end_ptr;
   float64_t result = strtod(value.data, &end_ptr);
   if (end_ptr == value.data) {
-    LogWarn("IniGetLong: Failed to convert [key: %s, value: %s] to double", key.data, value.data);
+    LogWarn("IniGetDouble: Failed to convert [key: %s, value: %s] to double", key.data, value.data);
     return 0.0;
   }
 
