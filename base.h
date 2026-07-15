@@ -1,7 +1,7 @@
 /* MIT License
 
   base.h - Better cross-platform STD
-  Version - 2026-04-20 (0.2.7):
+  Version - 2026-07-15 (0.2.8):
   https://github.com/TomasBorquez/base.h
 
   Usage:
@@ -243,19 +243,11 @@ void __base_vec_free(void **data, size_t *length, size_t *capacity);
 int64_t TimeNow(void);
 void WaitTime(int64_t ms);
 
-bool isLinux(void);
-bool isMacOs(void);
-bool isWindows(void);
-bool isUnix(void);
-bool isAndroid(void);
-bool isEmscripten(void);
-bool isFreeBSD(void);
+typedef enum { OS_LINUX = 1, OS_WINDOWS, OS_MACOS, OS_FREEBSD, OS_ANDROID, OS_EMSCRIPTEN } OS;
+OS GetOS(void);
 
-typedef enum { WINDOWS = 1, LINUX, MACOS, FREEBSD } Platform;
-Platform GetPlatform(void);
-
-typedef enum { GCC = 1, CLANG, TCC, MSVC } Compiler;
-Compiler GetCompiler(void);
+typedef enum { GCC = 1, CLANG, TCC, MSVC } CompilerFamily;
+CompilerFamily GetCompilerFamily(void);
 
 /* --- Error --- */
 typedef int32_t errno_t;
@@ -626,63 +618,7 @@ WARN_UNUSED errno_t memcpy_s(void *dest, size_t destSize, const void *src, size_
 }
 #  endif
 
-bool isLinux(void) {
-#  if defined(PLATFORM_LINUX)
-  return true;
-#  else
-  return false;
-#  endif
-}
-
-bool isMacOs(void) {
-#  if defined(PLATFORM_MACOS)
-  return true;
-#  else
-  return false;
-#  endif
-}
-
-bool isWindows(void) {
-#  if defined(PLATFORM_WIN)
-  return true;
-#  else
-  return false;
-#  endif
-}
-
-bool isUnix(void) {
-#  if defined(PLATFORM_UNIX)
-  return true;
-#  else
-  return false;
-#  endif
-}
-
-bool isAndroid(void) {
-#  if defined(PLATFORM_ANDROID)
-  return true;
-#  else
-  return false;
-#  endif
-}
-
-bool isEmscripten(void) {
-#  if defined(PLATFORM_EMSCRIPTEN)
-  return true;
-#  else
-  return false;
-#  endif
-}
-
-bool isFreeBSD(void) {
-#  if defined(PLATFORM_FREEBSD)
-  return true;
-#  else
-  return false;
-#  endif
-}
-
-Compiler GetCompiler(void) {
+CompilerFamily GetCompilerFamily(void) {
 #  if defined(COMPILER_CLANG)
   return CLANG;
 #  elif defined(COMPILER_GCC)
@@ -694,15 +630,15 @@ Compiler GetCompiler(void) {
 #  endif
 }
 
-Platform GetPlatform(void) {
+OS GetOS(void) {
 #  if defined(PLATFORM_WIN)
-  return WINDOWS;
+  return OS_WINDOWS;
 #  elif defined(PLATFORM_LINUX)
-  return LINUX;
+  return OS_LINUX;
 #  elif defined(PLATFORM_MACOS)
-  return MACOS;
+  return OS_MACOS;
 #  elif defined(PLATFORM_FREEBSD)
-  return FREEBSD;
+  return OS_FREEBSD;
 #  endif
 }
 
