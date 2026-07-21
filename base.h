@@ -1,84 +1,17 @@
-/* MIT License
+/* }}} --- MIT License --- {{{
+   base.h - Better cross-platform STD
+   Version - 2026-07-21 (0.2.10):
+   https://github.com/TomasBorquez/base.h
 
-  base.h - Better cross-platform STD
-  Version - 2026-07-21 (0.2.9):
-  https://github.com/TomasBorquez/base.h
+   Usage:
+     #define BASE_IMPLEMENTATION
+     #include "base.h"
 
-  Usage:
-    #define BASE_IMPLEMENTATION
-    #include "base.h"
-
-  More on the the `README.md`
+   More on the the `README.md` {{{
 */
 #pragma once
 
-/* --- Platform MACROS and includes --- */
-
-/* Fil-C is a clang fork, set FILC *and* fall through to the clang branch below,
-   so it gets clang's attributes/defer path. GetCompilerStr still names it "filc". */
-#if defined(__FILC__)
-#  define BASE_COMPILER_FILC
-#endif
-
-#if defined(__clang__)
-#  define BASE_COMPILER_CLANG
-#elif defined(__GNUC__)
-#  define BASE_COMPILER_GCC
-#elif defined(_MSC_VER)
-#  define BASE_COMPILER_MSVC
-#elif defined(__TINYC__)
-#  define BASE_COMPILER_TCC
-#else
-#  error "base.h: Unsupported compiler"
-#endif
-
-#if defined(BASE_COMPILER_GCC) || defined(BASE_COMPILER_CLANG)
-#  define GCC_VERSION (__GNUC__ * 100 + __GNUC_MINOR__)
-#  define NORETURN __attribute__((noreturn))
-#  define RETURNS_NON_NULL __attribute__((returns_nonnull))
-#  define PARAM_NON_NULL __attribute__((nonnull))
-
-#  define ALLOC_ATTR(sz) __attribute__((malloc, alloc_size(sz), returns_nonnull))
-#  define ALLOC_ATTR2(sz, al) __attribute__((malloc, alloc_size(sz), alloc_align(al), returns_nonnull))
-
-#  define UNLIKELY(x) __builtin_expect(!!(x), 0)
-#  define FORMAT_CHECK(fmt_pos, args_pos) __attribute__((format(printf, fmt_pos, args_pos)))
-#  define WARN_UNUSED __attribute__((warn_unused_result))
-
-#  if (GCC_VERSION >= 1100)
-#    define ATTR_MALLOC_DEALLOC(fn) __attribute__((malloc(fn, 1)))
-#  else
-#    define ATTR_MALLOC_DEALLOC(fn)
-#  endif
-
-#elif defined(BASE_COMPILER_MSVC)
-#  define NORETURN __declspec(noreturn)
-#  define RETURNS_NON_NULL
-#  define PARAM_NON_NULL
-
-#  define ALLOC_ATTR(sz)
-#  define ALLOC_ATTR2(sz, al)
-
-#  define UNLIKELY(x) x
-#  define FORMAT_CHECK(fmt_pos, args_pos)
-#  define WARN_UNUSED _Check_return_
-
-#  define ATTR_MALLOC_DEALLOC(fn)
-#else
-#  define NORETURN __declspec(noreturn)
-#  define RETURNS_NON_NULL
-#  define PARAM_NON_NULL
-
-#  define ALLOC_ATTR(sz)
-#  define ALLOC_ATTR2(sz, al)
-
-#  define UNLIKELY(x) x
-#  define FORMAT_CHECK(fmt_pos, args_pos)
-#  define WARN_UNUSED
-
-#  define ATTR_MALLOC_DEALLOC(fn)
-#endif
-
+/* --- Platform MACROS and includes --- {{{*/
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32__)
 #  define BASE_PLATFORM_WIN
 #elif defined(__EMSCRIPTEN__)
@@ -98,29 +31,39 @@
 #  endif
 #endif
 
-#if defined(BASE_COMPILER_CLANG)
-#  define FILE_NAME __FILE_NAME__
+#if defined(__x86_64__) || defined(_M_X64)
+#  define BASE_ARCH_X64
+#elif defined(__aarch64__) || defined(_M_ARM64)
+#  define BASE_ARCH_ARM64
+#elif defined(__i386__) || defined(_M_IX86)
+#  define BASE_ARCH_X86
+#elif defined(__arm__) || defined(_M_ARM)
+#  define BASE_ARCH_ARM32
+#elif defined(__riscv) && (__riscv_xlen == 64)
+#  define BASE_ARCH_RISCV64
+#elif defined(__powerpc64__) || defined(__ppc64__)
+#  define BASE_ARCH_PPC64
+#elif defined(__s390x__)
+#  define BASE_ARCH_S390X
+#elif defined(__wasm32__)
+#  define BASE_ARCH_WASM32
 #else
-#  define FILE_NAME __FILE__
+#  error "base.h: Unsupported arch"
 #endif
 
-#if defined(BASE_PLATFORM_WIN)
-#  define WIN32_LEAN_AND_MEAN
-#  include <windows.h>
-#  if !defined(ENABLE_VIRTUAL_TERMINAL_PROCESSING) // old SDKs sometimes dont have it
-#    define ENABLE_VIRTUAL_TERMINAL_PROCESSING 0x0004
+#if defined(__clang__)
+#  define BASE_COMPILER_CLANG
+#  if defined(__FILC__)
+#    define BASE_COMPILER_FILC
 #  endif
-#  include <BaseTsd.h>
+#elif defined(__GNUC__)
+#  define BASE_COMPILER_GCC
+#elif defined(_MSC_VER)
+#  define BASE_COMPILER_MSVC
+#elif defined(__TINYC__)
+#  define BASE_COMPILER_TCC
 #else
-#  define _POSIX_C_SOURCE 200809L
-#  define _GNU_SOURCE
-#  include <dirent.h>
-#  include <errno.h>
-#  include <fcntl.h>
-#  include <limits.h>
-#  include <sys/stat.h>
-#  include <sys/types.h>
-#  include <unistd.h>
+#  error "base.h: Unsupported compiler"
 #endif
 
 #if defined(__STDC_VERSION__)
@@ -151,6 +94,25 @@
 #  endif
 #endif
 
+#if defined(BASE_PLATFORM_WIN)
+#  define WIN32_LEAN_AND_MEAN
+#  include <windows.h>
+#  if !defined(ENABLE_VIRTUAL_TERMINAL_PROCESSING) // old SDKs sometimes dont have it
+#    define ENABLE_VIRTUAL_TERMINAL_PROCESSING 0x0004
+#  endif
+#  include <BaseTsd.h>
+#else
+#  define _POSIX_C_SOURCE 200809L
+#  define _GNU_SOURCE
+#  include <dirent.h>
+#  include <errno.h>
+#  include <fcntl.h>
+#  include <limits.h>
+#  include <sys/stat.h>
+#  include <sys/types.h>
+#  include <unistd.h>
+#endif
+
 #include <ctype.h>
 #include <inttypes.h>
 #include <stdarg.h>
@@ -162,7 +124,83 @@
 #include <string.h>
 #include <time.h>
 
-/* --- Platform Specific --- */
+/*}}} --- Types and MACRO types --- {{{*/
+typedef float float32_t;
+typedef double float64_t;
+
+typedef int32_t errno_t;
+
+typedef struct {
+  size_t length; // does not include null terminator
+  char *data;
+} String;
+
+#define I8 "%" PRIi8
+#define I16 "%" PRIi16
+#define I32 "%" PRIi32
+#define I64 "%" PRIi64
+
+#define U8 "%" PRIu8
+#define U16 "%" PRIu16
+#define U32 "%" PRIu32
+#define U64 "%" PRIu64
+
+#define ARR_LEN(arr) sizeof((arr)) / sizeof(*(arr))
+
+/*}}} --- Compiler Specific Defines/Types --- {{{*/
+#if defined(BASE_COMPILER_GCC) || defined(BASE_COMPILER_CLANG)
+#  define GCC_VERSION (__GNUC__ * 100 + __GNUC_MINOR__)
+#  define NORETURN __attribute__((noreturn))
+#  define RETURNS_NON_NULL __attribute__((returns_nonnull))
+#  define PARAM_NON_NULL __attribute__((nonnull))
+
+#  define ALLOC_ATTR(sz) __attribute__((malloc, alloc_size(sz), returns_nonnull))
+#  define ALLOC_ATTR2(sz, al) __attribute__((malloc, alloc_size(sz), alloc_align(al), returns_nonnull))
+
+#  define UNLIKELY(x) __builtin_expect(!!(x), 0)
+#  define FORMAT_CHECK(fmt_pos, args_pos) __attribute__((format(printf, fmt_pos, args_pos)))
+#  define WARN_UNUSED __attribute__((warn_unused_result))
+
+#  if (GCC_VERSION >= 1100)
+#    define ATTR_MALLOC_DEALLOC(fn) __attribute__((malloc(fn, 1)))
+#  else
+#    define ATTR_MALLOC_DEALLOC(fn)
+#  endif
+#elif defined(BASE_COMPILER_MSVC)
+#  define NORETURN __declspec(noreturn)
+#  define RETURNS_NON_NULL
+#  define PARAM_NON_NULL
+
+#  define ALLOC_ATTR(sz)
+#  define ALLOC_ATTR2(sz, al)
+
+#  define UNLIKELY(x) x
+#  define FORMAT_CHECK(fmt_pos, args_pos)
+#  define WARN_UNUSED _Check_return_
+
+#  define ATTR_MALLOC_DEALLOC(fn)
+#else
+#  define NORETURN __declspec(noreturn)
+#  define RETURNS_NON_NULL
+#  define PARAM_NON_NULL
+
+#  define ALLOC_ATTR(sz)
+#  define ALLOC_ATTR2(sz, al)
+
+#  define UNLIKELY(x) x
+#  define FORMAT_CHECK(fmt_pos, args_pos)
+#  define WARN_UNUSED
+
+#  define ATTR_MALLOC_DEALLOC(fn)
+#endif
+
+#if defined(BASE_COMPILER_CLANG)
+#  define FILE_NAME __FILE_NAME__
+#else
+#  define FILE_NAME __FILE__
+#endif
+
+/*}}} --- Platform Specific Defines/Types --- {{{*/
 #if defined(BASE_PLATFORM_WIN)
 #  define ssize_t SSIZE_T
 
@@ -177,30 +215,20 @@
 #    define snprintf _snprintf
 #    define vsnprintf _vsnprintf
 #  endif
+#else
+WARN_UNUSED errno_t memcpy_s(void *dest, size_t destSize, const void *src, size_t count);
+
+#  if !defined(EINVAL)
+#    define EINVAL 22 // Invalid argument
+#  endif
+
+#  if !defined(ERANGE)
+#    define ERANGE 34 // Result too large
+#  endif
+
 #endif
 
-/* --- Types and MACRO types --- */
-typedef float float32_t;
-typedef double float64_t;
-
-typedef struct {
-  size_t length; // does not include null terminator
-  char *data;
-} String;
-
-#define FMT_I8 "%" PRIi8
-#define FMT_I16 "%" PRIi16
-#define FMT_I32 "%" PRIi32
-#define FMT_I64 "%" PRIi64
-
-#define FMT_U8 "%" PRIu8
-#define FMT_U16 "%" PRIu16
-#define FMT_U32 "%" PRIu32
-#define FMT_U64 "%" PRIu64
-
-#define ARR_LEN(arr) sizeof((arr)) / sizeof(*(arr))
-
-/* --- Vector --- */
+/*}}} --- Vector --- {{{*/
 typedef int32_t (*CompareFunc)(const void *a, const void *b);
 
 int32_t __base_vec_partition(void **data, size_t element_size, CompareFunc compare, int32_t low, int32_t high);
@@ -246,12 +274,17 @@ void __base_vec_free(void **data, size_t *length, size_t *capacity);
 
 #define VecForEach(vector, it) for (__typeof__(*(vector).data) *(it) = (vector).data; (vector).data && (it) < (vector).data + (vector).length; (it)++)
 
-/* --- Time and Platforms --- */
+/*}}} --- Time and Platforms --- {{{*/
 int64_t TimeNow(void);
 void WaitTime(int64_t ms);
 
 typedef enum { OS_LINUX = 1, OS_WINDOWS, OS_MACOS, OS_FREEBSD, OS_ANDROID, OS_EMSCRIPTEN } OS;
-OS GetOS(void);
+OS    GetOS(void);
+char *GetOSStr(void);
+
+typedef enum { ARCH_X64 = 1, ARCH_X86, ARCH_ARM64, ARCH_ARM32, ARCH_RISCV64, ARCH_PPC64, ARCH_S390X, ARCH_WASM32 } Arch;
+Arch  GetArch(void);
+char *GetArchStr(void);
 
 /* Compiler *family*: The convention set base treats a compiler as, NOT the
    exact binary (use GetCompilerStr for that), forks collapse into their parent:
@@ -260,13 +293,9 @@ OS GetOS(void);
    because it's missing features you'll want to #if guard against. */
 typedef enum { COMPILER_GCC = 1, COMPILER_CLANG, COMPILER_TCC, COMPILER_MSVC } CompilerFamily;
 CompilerFamily GetCompilerFamily(void);
+char          *GetCompilerStr(void);
 
-/* Exact toolchain name (clang, gcc, cl.exe, filc, ...) */
-char *GetCompilerStr(void);
-
-/* --- Error --- */
-typedef int32_t errno_t;
-
+/*}}} --- Error --- {{{*/
 typedef enum {
   SUCCESS = 0,
 
@@ -298,7 +327,7 @@ static void _custom_assert(const char *expr, const char *file, unsigned line, co
 #define Unreachable(...) (void)((_custom_unreachable(__FILE__, __LINE__, __VA_ARGS__), 0))
 static void _custom_unreachable(const char *file, unsigned line, const char *format, ...) FORMAT_CHECK(3, 4);
 
-/* --- Arena --- */
+/*}}} --- Arena --- {{{*/
 typedef struct __ArenaChunk {
   struct __ArenaChunk *next;
   size_t cap;
@@ -323,12 +352,12 @@ void ArenaReset(Arena *arena) PARAM_NON_NULL;
 
 Arena *ArenaCreate(size_t chunk_size) ATTR_MALLOC_DEALLOC(ArenaFree);
 
-/* --- Memory Allocations --- */
+/*}}} --- Memory Allocations --- {{{*/
 void *Realloc(void *block, size_t size) RETURNS_NON_NULL;
 void *Malloc(size_t size) RETURNS_NON_NULL;
 void Free(void *address) PARAM_NON_NULL;
 
-/* --- String and Macros --- */
+/*}}} --- String and Macros --- {{{*/
 #define TYPE_INIT(type) (type)
 #define STRING_LENGTH(s) ((sizeof((s)) / sizeof((s)[0])) - sizeof((s)[0])) // NOTE: Inspired from clay.h
 #define ENSURE_STRING_LITERAL(x) ("" x "")
@@ -372,14 +401,14 @@ void SBAddFormatV(StringBuilder *builder, char *fmt, va_list args);
 
 #define SBAddS(builder, string) SBAdd(builder, S(string))
 
-/* --- Random --- */
+/*}}} --- Random --- {{{*/
 void RandomInit(void);
 uint64_t RandomGetSeed(void);
 void RandomSetSeed(uint64_t newSeed);
 int32_t RandomInteger(int32_t min, int32_t max);
 float32_t RandomFloat(float32_t min, float32_t max);
 
-/* --- File System --- */
+/*}}} --- File System --- {{{*/
 typedef struct {
   char *name;
   char *extension;
@@ -409,7 +438,7 @@ WARN_UNUSED Error FileDelete(String path);
 WARN_UNUSED Error FileRename(String oldPath, String newPath);
 WARN_UNUSED Error FileCopy(String sourcePath, String destPath);
 
-/* --- Logger --- */
+/*}}} --- Logger --- {{{*/
 #define _RESET "\x1b[0m"
 #define _GRAY "\x1b[0;36m"
 #define _RED "\x1b[0;31m"
@@ -423,7 +452,7 @@ void LogError(const char *format, ...) FORMAT_CHECK(1, 2);
 void LogSuccess(const char *format, ...) FORMAT_CHECK(1, 2);
 void logErrorV(const char *format, va_list args) FORMAT_CHECK(1, 0);
 
-/* --- Math --- */
+/*}}} --- Math --- {{{*/
 #define Min(a, b) (((a) < (b)) ? (a) : (b))
 #define Max(a, b) (((a) > (b)) ? (a) : (b))
 #define Clamp(a, x, b) (((x) < (a)) ? (a) : ((b) < (x)) ? (b) : (x))
@@ -434,7 +463,7 @@ void logErrorV(const char *format, va_list args) FORMAT_CHECK(1, 0);
     a ^= b;        \
   } while (0)
 
-/* --- Defer Macros --- */
+/*}}} --- Defer Macros --- {{{*/
 #if defined(DEFER_MACRO)
 /* [GCC implementation] Must use C23 (depending on the platform) */
 #  if defined(BASE_COMPILER_GCC)
@@ -466,7 +495,7 @@ static inline void __df_cb(__df_t *__fp) {
 #  endif
 #endif
 
-/* --- INI Parser --- */
+/*}}} --- INI Parser --- */
 typedef struct {
   String key;
   String value;
@@ -491,12 +520,29 @@ int64_t IniGetLong(IniFile *ini_file, String key);
 float64_t IniGetDouble(IniFile *ini_file, String key);
 bool IniGetBool(IniFile *ini_file, String key);
 
-/* MIT License
+/* }}} --- MIT License --- {{{
    base.h - Implementation of base.h
    https://github.com/TomasBorquez/base.h
 */
 #if defined(BASE_IMPLEMENTATION)
-/* --- Vector Implementation --- */
+/* --- Platform Specific Implementation --- {{{*/
+#  if !defined(BASE_PLATFORM_WIN)
+WARN_UNUSED errno_t memcpy_s(void *dest, size_t destSize, const void *src, size_t count) {
+  if (dest == NULL) {
+    return EINVAL;
+  }
+
+  if (src == NULL || destSize < count) {
+    memset(dest, 0, destSize);
+    return EINVAL;
+  }
+
+  memcpy(dest, src, count);
+  return 0;
+}
+#  endif
+
+/*}}} --- Vector Implementation --- {{{*/
 int32_t __base_vec_partition(void **data, size_t element_size, CompareFunc compare, int32_t low, int32_t high) {
   void *pivot = (char *)(*data) + (high * element_size);
   int32_t i = low - 1;
@@ -605,77 +651,7 @@ void __base_vec_free(void **data, size_t *length, size_t *capacity) {
   *capacity = 0;
 }
 
-/* --- Time and Platforms Implementation --- */
-#  if !defined(BASE_PLATFORM_WIN)
-WARN_UNUSED errno_t memcpy_s(void *dest, size_t destSize, const void *src, size_t count);
-
-#    if !defined(EINVAL)
-#      define EINVAL 22 // Invalid argument
-#    endif
-
-#    if !defined(ERANGE)
-#      define ERANGE 34 // Result too large
-#    endif
-
-WARN_UNUSED errno_t memcpy_s(void *dest, size_t destSize, const void *src, size_t count) {
-  if (dest == NULL) {
-    return EINVAL;
-  }
-
-  if (src == NULL || destSize < count) {
-    memset(dest, 0, destSize);
-    return EINVAL;
-  }
-
-  memcpy(dest, src, count);
-  return 0;
-}
-#  endif
-
-CompilerFamily GetCompilerFamily(void) {
-#  if defined(BASE_COMPILER_CLANG)
-  return COMPILER_CLANG;
-#  elif defined(BASE_COMPILER_GCC)
-  return COMPILER_GCC;
-#  elif defined(BASE_COMPILER_TCC)
-  return COMPILER_TCC;
-#  elif defined(BASE_COMPILER_MSVC)
-  return COMPILER_MSVC;
-#  else
-#    error "base.h: Unsupported compiler"
-#  endif
-}
-
-char *GetCompilerStr(void) {
-#  if defined(BASE_COMPILER_FILC)
-  return "filc";
-#  elif defined(BASE_COMPILER_CLANG)
-  return "clang";
-#  elif defined(BASE_COMPILER_GCC)
-  return "gcc";
-#  elif defined(BASE_COMPILER_TCC)
-  return "tcc";
-#  elif defined(BASE_COMPILER_MSVC)
-  return "cl.exe";
-#  else
-#    error "base.h: Unsupported compiler"
-#  endif
-}
-
-OS GetOS(void) {
-#  if defined(BASE_PLATFORM_WIN)
-  return OS_WINDOWS;
-#  elif defined(BASE_PLATFORM_LINUX)
-  return OS_LINUX;
-#  elif defined(BASE_PLATFORM_MACOS)
-  return OS_MACOS;
-#  elif defined(BASE_PLATFORM_FREEBSD)
-  return OS_FREEBSD;
-#  else
-#    error "base.h: Unsupported platform"
-#  endif
-}
-
+/*}}} --- Time and Platforms Implementation --- {{{*/
 int64_t TimeNow(void) {
 #  if defined(BASE_PLATFORM_WIN)
   FILETIME ft;
@@ -703,6 +679,118 @@ void WaitTime(int64_t ms) {
   ts.tv_sec = ms / 1000;
   ts.tv_nsec = (ms % 1000) * 1000000;
   nanosleep(&ts, NULL);
+#  endif
+}
+
+OS GetOS(void) {
+#  if defined(BASE_PLATFORM_WIN)
+  return OS_WINDOWS;
+#  elif defined(BASE_PLATFORM_ANDROID)
+  return OS_ANDROID;
+#  elif defined(BASE_PLATFORM_LINUX)
+  return OS_LINUX;
+#  elif defined(BASE_PLATFORM_MACOS)
+  return OS_MACOS;
+#  elif defined(BASE_PLATFORM_FREEBSD)
+  return OS_FREEBSD;
+#  elif defined(BASE_PLATFORM_EMSCRIPTEN)
+  return OS_EMSCRIPTEN;
+#  else
+#    error "base.h: Unsupported platform"
+#  endif
+}
+
+char *GetOSStr(void) {
+#  if defined(BASE_PLATFORM_WIN)
+  return "windows";
+#  elif defined(BASE_PLATFORM_ANDROID)
+  return "android";
+#  elif defined(BASE_PLATFORM_LINUX)
+  return "linux";
+#  elif defined(BASE_PLATFORM_MACOS)
+  return "macos";
+#  elif defined(BASE_PLATFORM_FREEBSD)
+  return "freebsd";
+#  elif defined(BASE_PLATFORM_EMSCRIPTEN)
+  return "emscripten";
+#  else
+#    error "base.h: Unsupported platform"
+#  endif
+}
+
+Arch GetArch(void) {
+#  if defined(BASE_ARCH_X64)
+  return ARCH_X64;
+#  elif defined(BASE_ARCH_ARM64)
+  return ARCH_ARM64;
+#  elif defined(BASE_ARCH_X86)
+  return ARCH_X86;
+#  elif defined(BASE_ARCH_ARM32)
+  return ARCH_ARM32;
+#  elif defined(BASE_ARCH_RISCV64)
+  return ARCH_RISCV64;
+#  elif defined(BASE_ARCH_PPC64)
+  return ARCH_PPC64;
+#  elif defined(BASE_ARCH_S390X)
+  return ARCH_S390X;
+#  elif defined(BASE_ARCH_WASM32)
+  return ARCH_WASM32;
+#  else
+#    error "base.h: Unsupported arch"
+#  endif
+}
+
+char *GetArchStr(void) {
+#  if defined(BASE_ARCH_X64)
+  return "x86_64";
+#  elif defined(BASE_ARCH_ARM64)
+  return "aarch64";
+#  elif defined(BASE_ARCH_X86)
+  return "x86";
+#  elif defined(BASE_ARCH_ARM32)
+  return "arm";
+#  elif defined(BASE_ARCH_RISCV64)
+  return "riscv64";
+#  elif defined(BASE_ARCH_PPC64)
+  return "ppc64";
+#  elif defined(BASE_ARCH_S390X)
+  return "s390x";
+#  elif defined(BASE_ARCH_WASM32)
+  return "wasm32";
+#  else
+#    error "base.h: Unsupported arch"
+#  endif
+}
+
+CompilerFamily GetCompilerFamily(void) {
+#  if defined(BASE_COMPILER_CLANG)
+  return COMPILER_CLANG;
+#  elif defined(BASE_COMPILER_GCC)
+  return COMPILER_GCC;
+#  elif defined(BASE_COMPILER_MSVC)
+  return COMPILER_MSVC;
+#  elif defined(BASE_COMPILER_TCC)
+  return COMPILER_TCC;
+#  else
+#    error "base.h: Unsupported compiler"
+#  endif
+}
+
+char *GetCompilerStr(void) {
+#  if defined(BASE_COMPILER_CLANG)
+#    if defined(BASE_COMPILER_FILC)
+  return "filc";
+#    else
+  return "clang";
+#    endif
+#  elif defined(BASE_COMPILER_GCC)
+  return "gcc";
+#  elif defined(BASE_COMPILER_MSVC)
+  return "cl.exe";
+#  elif defined(BASE_COMPILER_TCC)
+  return "tcc";
+#  else
+#    error "base.h: Unsupported compiler"
 #  endif
 }
 
@@ -787,7 +875,7 @@ static void _custom_unreachable(const char *file, unsigned line, const char *for
   abort();
 }
 
-/* --- Arena Implementation --- */
+/*}}} --- Arena Implementation --- {{{*/
 // Allocate or iterate to next chunk that can fit `bytes`
 static void __ArenaNextChunk(Arena *arena, size_t bytes) {
   __ArenaChunk *next = arena->current ? arena->current->next : NULL;
@@ -866,7 +954,7 @@ Arena *ArenaCreate(size_t chunk_size) {
   return res;
 }
 
-/* --- Memory Allocations --- */
+/*}}} --- Memory Allocations --- {{{*/
 void *Malloc(size_t size) {
   Assert(size != 0, "Malloc: size cant be zero");
   void *address = malloc(size);
@@ -885,7 +973,7 @@ void Free(void *address) {
   free(address);
 }
 
-/* --- String Implementation --- */
+/*}}} --- String Implementation --- {{{*/
 static size_t max_string_size = 10000;
 String s(char *msg) {
   if (msg == NULL) {
@@ -1301,7 +1389,7 @@ void SBAddF(StringBuilder *builder, char *fmt, ...) {
     va_end(args);
 }
 
-/* --- Random Implemenation --- */
+/*}}} --- Random Implemenation --- {{{*/
 static uint64_t seed = 0;
 
 uint64_t RandomGetSeed(void) {
@@ -1338,7 +1426,7 @@ float32_t RandomFloat(float32_t min, float32_t max) {
   return min + normalized * (max - min);
 }
 
-/* --- File System Implementation --- */
+/*}}} --- File System Implementation --- {{{*/
 #  if defined(BASE_PLATFORM_WIN)
 static char curr_path[MAX_PATH];
 GetCwdResult GetCwd(void) {
@@ -1721,7 +1809,7 @@ Error FileCopy(String sourcePath, String destPath) {
 }
 #  endif
 
-/* --- Logger Implemenation --- */
+/*}}} --- Logger Implemenation --- {{{*/
 void LogInit(void) {
 #  if defined(BASE_PLATFORM_WIN)
   HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
@@ -1774,7 +1862,7 @@ void logErrorV(const char *format, va_list args) {
   printf("%s\n", _RESET);
 }
 
-/* --- INI Parser Implementation --- */
+/*}}} --- INI Parser Implementation --- */
 IniParseResult IniParse(String path) {
   IniParseResult result = {0};
   FileStatsResult stats = FileStats(path);
@@ -1949,3 +2037,4 @@ bool IniGetBool(IniFile *ini_file, String key) {
   return StrEq(value, S("true"));
 }
 #endif
+/* }}} */
