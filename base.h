@@ -520,12 +520,12 @@ int64_t IniGetLong(IniFile *ini_file, String key);
 float64_t IniGetDouble(IniFile *ini_file, String key);
 bool IniGetBool(IniFile *ini_file, String key);
 
-/* }}} --- MIT License --- {{{
-   base.h - Implementation of base.h
-   https://github.com/TomasBorquez/base.h
+/*}}} --- MIT License --- {{{
+  base.h - Implementation of base.h
+  https://github.com/TomasBorquez/base.h
 */
 #if defined(BASE_IMPLEMENTATION)
-/* --- Platform Specific Implementation --- {{{*/
+/*    --- Platform Specific Implementation --- {{{*/
 #  if !defined(BASE_PLATFORM_WIN)
 WARN_UNUSED errno_t memcpy_s(void *dest, size_t destSize, const void *src, size_t count) {
   if (dest == NULL) {
@@ -542,7 +542,7 @@ WARN_UNUSED errno_t memcpy_s(void *dest, size_t destSize, const void *src, size_
 }
 #  endif
 
-/*}}} --- Vector Implementation --- {{{*/
+/*   }}} --- Vector Implementation --- {{{*/
 int32_t __base_vec_partition(void **data, size_t element_size, CompareFunc compare, int32_t low, int32_t high) {
   void *pivot = (char *)(*data) + (high * element_size);
   int32_t i = low - 1;
@@ -651,7 +651,7 @@ void __base_vec_free(void **data, size_t *length, size_t *capacity) {
   *capacity = 0;
 }
 
-/*}}} --- Time and Platforms Implementation --- {{{*/
+/*   }}} --- Time and Platforms Implementation --- {{{*/
 int64_t TimeNow(void) {
 #  if defined(BASE_PLATFORM_WIN)
   FILETIME ft;
@@ -875,7 +875,7 @@ static void _custom_unreachable(const char *file, unsigned line, const char *for
   abort();
 }
 
-/*}}} --- Arena Implementation --- {{{*/
+/*   }}} --- Arena Implementation --- {{{*/
 // Allocate or iterate to next chunk that can fit `bytes`
 static void __ArenaNextChunk(Arena *arena, size_t bytes) {
   __ArenaChunk *next = arena->current ? arena->current->next : NULL;
@@ -954,7 +954,7 @@ Arena *ArenaCreate(size_t chunk_size) {
   return res;
 }
 
-/*}}} --- Memory Allocations --- {{{*/
+/*   }}} --- Memory Allocations --- {{{*/
 void *Malloc(size_t size) {
   Assert(size != 0, "Malloc: size cant be zero");
   void *address = malloc(size);
@@ -973,7 +973,7 @@ void Free(void *address) {
   free(address);
 }
 
-/*}}} --- String Implementation --- {{{*/
+/*   }}} --- String Implementation --- {{{*/
 static size_t max_string_size = 10000;
 String s(char *msg) {
   if (msg == NULL) {
@@ -1389,7 +1389,7 @@ void SBAddF(StringBuilder *builder, char *fmt, ...) {
     va_end(args);
 }
 
-/*}}} --- Random Implemenation --- {{{*/
+/*   }}} --- Random Implemenation --- {{{*/
 static uint64_t seed = 0;
 
 uint64_t RandomGetSeed(void) {
@@ -1426,7 +1426,7 @@ float32_t RandomFloat(float32_t min, float32_t max) {
   return min + normalized * (max - min);
 }
 
-/*}}} --- File System Implementation --- {{{*/
+/*   }}} --- File System Implementation --- {{{*/
 #  if defined(BASE_PLATFORM_WIN)
 static char curr_path[MAX_PATH];
 GetCwdResult GetCwd(void) {
@@ -1809,7 +1809,7 @@ Error FileCopy(String sourcePath, String destPath) {
 }
 #  endif
 
-/*}}} --- Logger Implemenation --- {{{*/
+/*   }}} --- Logger Implemenation --- {{{*/
 void LogInit(void) {
 #  if defined(BASE_PLATFORM_WIN)
   HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
@@ -1862,7 +1862,7 @@ void logErrorV(const char *format, va_list args) {
   printf("%s\n", _RESET);
 }
 
-/*}}} --- INI Parser Implementation --- */
+/*   }}} --- INI Parser Implementation --- */
 IniParseResult IniParse(String path) {
   IniParseResult result = {0};
   FileStatsResult stats = FileStats(path);
