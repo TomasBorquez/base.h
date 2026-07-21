@@ -11,7 +11,7 @@
 */
 #pragma once
 
-/*    --- Platform MACROS and includes --- {{{*/
+/*   --- Platform MACROS and includes --- {{{   */
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32__)
 #  define BASE_PLATFORM_WIN
 #elif defined(__EMSCRIPTEN__)
@@ -124,7 +124,7 @@
 #include <string.h>
 #include <time.h>
 
-/*    }}} --- Types and MACRO types --- {{{*/
+/*   }}} --- Types and MACRO types --- {{{   */
 typedef float float32_t;
 typedef double float64_t;
 
@@ -147,7 +147,7 @@ typedef struct {
 
 #define ARR_LEN(arr) sizeof((arr)) / sizeof(*(arr))
 
-/*    }}} --- Compiler Specific Defines/Types --- {{{*/
+/*   }}} --- Compiler Specific Defines/Types --- {{{   */
 #if defined(BASE_COMPILER_GCC) || defined(BASE_COMPILER_CLANG)
 #  define GCC_VERSION (__GNUC__ * 100 + __GNUC_MINOR__)
 #  define NORETURN __attribute__((noreturn))
@@ -200,7 +200,7 @@ typedef struct {
 #  define FILE_NAME __FILE__
 #endif
 
-/*    }}} --- Platform Specific Defines/Types --- {{{*/
+/*   }}} --- Platform Specific Defines/Types --- {{{   */
 #if defined(BASE_PLATFORM_WIN)
 #  define ssize_t SSIZE_T
 
@@ -228,7 +228,7 @@ WARN_UNUSED errno_t memcpy_s(void *dest, size_t destSize, const void *src, size_
 
 #endif
 
-/*    }}} --- Vector --- {{{*/
+/*   }}} --- Vector --- {{{   */
 typedef int32_t (*CompareFunc)(const void *a, const void *b);
 
 int32_t __base_vec_partition(void **data, size_t element_size, CompareFunc compare, int32_t low, int32_t high);
@@ -274,7 +274,7 @@ void __base_vec_free(void **data, size_t *length, size_t *capacity);
 
 #define VecForEach(vector, it) for (__typeof__(*(vector).data) *(it) = (vector).data; (vector).data && (it) < (vector).data + (vector).length; (it)++)
 
-/*    }}} --- Time and Platforms --- {{{*/
+/*   }}} --- Time and Platforms --- {{{   */
 int64_t TimeNow(void);
 void WaitTime(int64_t ms);
 
@@ -295,7 +295,7 @@ typedef enum { COMPILER_GCC = 1, COMPILER_CLANG, COMPILER_TCC, COMPILER_MSVC } C
 CompilerFamily GetCompilerFamily(void);
 char          *GetCompilerStr(void);
 
-/*    }}} --- Error --- {{{*/
+/*   }}} --- Error --- {{{   */
 typedef enum {
   SUCCESS = 0,
 
@@ -327,7 +327,7 @@ static void _custom_assert(const char *expr, const char *file, unsigned line, co
 #define Unreachable(...) (void)((_custom_unreachable(__FILE__, __LINE__, __VA_ARGS__), 0))
 static void _custom_unreachable(const char *file, unsigned line, const char *format, ...) FORMAT_CHECK(3, 4);
 
-/*    }}} --- Arena --- {{{*/
+/*   }}} --- Arena --- {{{   */
 typedef struct __ArenaChunk {
   struct __ArenaChunk *next;
   size_t cap;
@@ -352,12 +352,12 @@ void ArenaReset(Arena *arena) PARAM_NON_NULL;
 
 Arena *ArenaCreate(size_t chunk_size) ATTR_MALLOC_DEALLOC(ArenaFree);
 
-/*    }}} --- Memory Allocations --- {{{*/
+/*   }}} --- Memory Allocations --- {{{   */
 void *Realloc(void *block, size_t size) RETURNS_NON_NULL;
 void *Malloc(size_t size) RETURNS_NON_NULL;
 void Free(void *address) PARAM_NON_NULL;
 
-/*    }}} --- String and Macros --- {{{*/
+/*   }}} --- String and Macros --- {{{   */
 #define TYPE_INIT(type) (type)
 #define STRING_LENGTH(s) ((sizeof((s)) / sizeof((s)[0])) - sizeof((s)[0])) // NOTE: Inspired from clay.h
 #define ENSURE_STRING_LITERAL(x) ("" x "")
@@ -401,14 +401,14 @@ void SBAddFormatV(StringBuilder *builder, char *fmt, va_list args);
 
 #define SBAddS(builder, string) SBAdd(builder, S(string))
 
-/*    }}} --- Random --- {{{*/
+/*   }}} --- Random --- {{{   */
 void RandomInit(void);
 uint64_t RandomGetSeed(void);
 void RandomSetSeed(uint64_t newSeed);
 int32_t RandomInteger(int32_t min, int32_t max);
 float32_t RandomFloat(float32_t min, float32_t max);
 
-/*    }}} --- File System --- {{{*/
+/*   }}} --- File System --- {{{   */
 typedef struct {
   char *name;
   char *extension;
@@ -438,7 +438,7 @@ WARN_UNUSED Error FileDelete(String path);
 WARN_UNUSED Error FileRename(String oldPath, String newPath);
 WARN_UNUSED Error FileCopy(String sourcePath, String destPath);
 
-/*    }}} --- Logger --- {{{*/
+/*   }}} --- Logger --- {{{   */
 #define _RESET "\x1b[0m"
 #define _GRAY "\x1b[0;36m"
 #define _RED "\x1b[0;31m"
@@ -452,7 +452,7 @@ void LogError(const char *format, ...) FORMAT_CHECK(1, 2);
 void LogSuccess(const char *format, ...) FORMAT_CHECK(1, 2);
 void logErrorV(const char *format, va_list args) FORMAT_CHECK(1, 0);
 
-/*    }}} --- Math --- {{{*/
+/*   }}} --- Math --- {{{   */
 #define Min(a, b) (((a) < (b)) ? (a) : (b))
 #define Max(a, b) (((a) > (b)) ? (a) : (b))
 #define Clamp(a, x, b) (((x) < (a)) ? (a) : ((b) < (x)) ? (b) : (x))
@@ -463,7 +463,7 @@ void logErrorV(const char *format, va_list args) FORMAT_CHECK(1, 0);
     a ^= b;        \
   } while (0)
 
-/*    }}} --- Defer Macros --- {{{*/
+/*   }}} --- Defer Macros --- {{{   */
 #if defined(DEFER_MACRO)
 /* [GCC implementation] Must use C23 (depending on the platform) */
 #  if defined(BASE_COMPILER_GCC)
@@ -495,7 +495,7 @@ static inline void __df_cb(__df_t *__fp) {
 #  endif
 #endif
 
-/*    }}} --- INI Parser --- */
+/*   }}} --- INI Parser --- {{{   */
 typedef struct {
   String key;
   String value;
@@ -519,13 +519,13 @@ int32_t IniGetInt(IniFile *ini_file, String key);
 int64_t IniGetLong(IniFile *ini_file, String key);
 float64_t IniGetDouble(IniFile *ini_file, String key);
 bool IniGetBool(IniFile *ini_file, String key);
-
+/*   }}}   */
 /*}}} --- MIT License --- {{{
   base.h - Implementation of base.h
   https://github.com/TomasBorquez/base.h
 */
 #if defined(BASE_IMPLEMENTATION)
-/*    --- Platform Specific Implementation --- {{{*/
+/*   --- Platform Specific Implementation --- {{{   */
 #  if !defined(BASE_PLATFORM_WIN)
 WARN_UNUSED errno_t memcpy_s(void *dest, size_t destSize, const void *src, size_t count) {
   if (dest == NULL) {
@@ -542,7 +542,7 @@ WARN_UNUSED errno_t memcpy_s(void *dest, size_t destSize, const void *src, size_
 }
 #  endif
 
-/*   }}} --- Vector Implementation --- {{{*/
+/*   }}} --- Vector Implementation --- {{{   */
 int32_t __base_vec_partition(void **data, size_t element_size, CompareFunc compare, int32_t low, int32_t high) {
   void *pivot = (char *)(*data) + (high * element_size);
   int32_t i = low - 1;
@@ -651,7 +651,7 @@ void __base_vec_free(void **data, size_t *length, size_t *capacity) {
   *capacity = 0;
 }
 
-/*   }}} --- Time and Platforms Implementation --- {{{*/
+/*   }}} --- Time and Platforms Implementation --- {{{   */
 int64_t TimeNow(void) {
 #  if defined(BASE_PLATFORM_WIN)
   FILETIME ft;
@@ -875,7 +875,7 @@ static void _custom_unreachable(const char *file, unsigned line, const char *for
   abort();
 }
 
-/*   }}} --- Arena Implementation --- {{{*/
+/*   }}} --- Arena Implementation --- {{{   */
 // Allocate or iterate to next chunk that can fit `bytes`
 static void __ArenaNextChunk(Arena *arena, size_t bytes) {
   __ArenaChunk *next = arena->current ? arena->current->next : NULL;
@@ -954,7 +954,7 @@ Arena *ArenaCreate(size_t chunk_size) {
   return res;
 }
 
-/*   }}} --- Memory Allocations --- {{{*/
+/*   }}} --- Memory Allocations --- {{{   */
 void *Malloc(size_t size) {
   Assert(size != 0, "Malloc: size cant be zero");
   void *address = malloc(size);
@@ -973,7 +973,7 @@ void Free(void *address) {
   free(address);
 }
 
-/*   }}} --- String Implementation --- {{{*/
+/*   }}} --- String Implementation --- {{{   */
 static size_t max_string_size = 10000;
 String s(char *msg) {
   if (msg == NULL) {
@@ -1389,7 +1389,7 @@ void SBAddF(StringBuilder *builder, char *fmt, ...) {
     va_end(args);
 }
 
-/*   }}} --- Random Implemenation --- {{{*/
+/*   }}} --- Random Implemenation --- {{{   */
 static uint64_t seed = 0;
 
 uint64_t RandomGetSeed(void) {
@@ -1426,7 +1426,7 @@ float32_t RandomFloat(float32_t min, float32_t max) {
   return min + normalized * (max - min);
 }
 
-/*   }}} --- File System Implementation --- {{{*/
+/*   }}} --- File System Implementation --- {{{   */
 #  if defined(BASE_PLATFORM_WIN)
 static char curr_path[MAX_PATH];
 GetCwdResult GetCwd(void) {
@@ -1809,7 +1809,7 @@ Error FileCopy(String sourcePath, String destPath) {
 }
 #  endif
 
-/*   }}} --- Logger Implemenation --- {{{*/
+/*   }}} --- Logger Implemenation --- {{{   */
 void LogInit(void) {
 #  if defined(BASE_PLATFORM_WIN)
   HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
@@ -1862,7 +1862,7 @@ void logErrorV(const char *format, va_list args) {
   printf("%s\n", _RESET);
 }
 
-/*   }}} --- INI Parser Implementation --- */
+/*   }}} --- INI Parser Implementation --- {{{   */
 IniParseResult IniParse(String path) {
   IniParseResult result = {0};
   FileStatsResult stats = FileStats(path);
@@ -2037,4 +2037,5 @@ bool IniGetBool(IniFile *ini_file, String key) {
   return StrEq(value, S("true"));
 }
 #endif
-/* }}} */
+/*   }}}   */
+/*}}}*/
