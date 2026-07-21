@@ -1,7 +1,7 @@
 /* MIT License
 
   base.h - Better cross-platform STD
-  Version - 2026-07-15 (0.2.8):
+  Version - 2026-07-21 (0.2.9):
   https://github.com/TomasBorquez/base.h
 
   Usage:
@@ -13,19 +13,26 @@
 #pragma once
 
 /* --- Platform MACROS and includes --- */
-#if defined(__clang__)
-#  define COMPILER_CLANG
-#elif defined(__GNUC__)
-#  define COMPILER_GCC
-#elif defined(_MSC_VER)
-#  define COMPILER_MSVC
-#elif defined(__TINYC__)
-#  define COMPILER_TCC
-#else
-#  error "The codebase only supports GCC, Clang, TCC and MSVC"
+
+/* Fil-C is a clang fork, set FILC *and* fall through to the clang branch below,
+   so it gets clang's attributes/defer path. GetCompilerStr still names it "filc". */
+#if defined(__FILC__)
+#  define BASE_COMPILER_FILC
 #endif
 
-#if defined(COMPILER_GCC) || defined(COMPILER_CLANG)
+#if defined(__clang__)
+#  define BASE_COMPILER_CLANG
+#elif defined(__GNUC__)
+#  define BASE_COMPILER_GCC
+#elif defined(_MSC_VER)
+#  define BASE_COMPILER_MSVC
+#elif defined(__TINYC__)
+#  define BASE_COMPILER_TCC
+#else
+#  error "base.h: Unsupported compiler"
+#endif
+
+#if defined(BASE_COMPILER_GCC) || defined(BASE_COMPILER_CLANG)
 #  define GCC_VERSION (__GNUC__ * 100 + __GNUC_MINOR__)
 #  define NORETURN __attribute__((noreturn))
 #  define RETURNS_NON_NULL __attribute__((returns_nonnull))
@@ -44,7 +51,7 @@
 #    define ATTR_MALLOC_DEALLOC(fn)
 #  endif
 
-#elif defined(COMPILER_MSVC)
+#elif defined(BASE_COMPILER_MSVC)
 #  define NORETURN __declspec(noreturn)
 #  define RETURNS_NON_NULL
 #  define PARAM_NON_NULL
@@ -73,31 +80,31 @@
 #endif
 
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32__)
-#  define PLATFORM_WIN
+#  define BASE_PLATFORM_WIN
+#elif defined(__EMSCRIPTEN__)
+#  define BASE_PLATFORM_EMSCRIPTEN
 #else
-#  define PLATFORM_UNIX
+#  define BASE_PLATFORM_UNIX
 #  if defined(__ANDROID__)
-#    define PLATFORM_ANDROID
+#    define BASE_PLATFORM_ANDROID
 #  elif defined(__linux__) || defined(__gnu_linux__)
-#    define PLATFORM_LINUX
+#    define BASE_PLATFORM_LINUX
 #  elif defined(__APPLE__) || defined(__MACH__)
-#    define PLATFORM_MACOS
+#    define BASE_PLATFORM_MACOS
 #  elif defined(__FreeBSD__)
-#    define PLATFORM_FREEBSD
-#  elif defined(__EMSCRIPTEN__)
-#    define PLATFORM_EMSCRIPTEN
+#    define BASE_PLATFORM_FREEBSD
 #  else
-#    error "The codebase only supports linux, macos, FreeBSD, windows, android and emscripten"
+#    error "base.h: Unsupported platform"
 #  endif
 #endif
 
-#if defined(COMPILER_CLANG)
+#if defined(BASE_COMPILER_CLANG)
 #  define FILE_NAME __FILE_NAME__
 #else
 #  define FILE_NAME __FILE__
 #endif
 
-#if defined(PLATFORM_WIN)
+#if defined(BASE_PLATFORM_WIN)
 #  define WIN32_LEAN_AND_MEAN
 #  include <windows.h>
 #  if !defined(ENABLE_VIRTUAL_TERMINAL_PROCESSING) // old SDKs sometimes dont have it
@@ -130,10 +137,10 @@
 #    define C_STANDARD_C99
 #    define C_STANDARD "C99"
 #  else
-#    error "Why C89 if you have C99"
+#    error "base.h: Unsupported C version, C99+"
 #  endif
 #else
-#  if defined(COMPILER_MSVC)
+#  if defined(BASE_COMPILER_MSVC)
 #    if defined(_MSC_VER) && _MSC_VER >= 1920 // >= Visual Studio 2019
 #      define C_STANDARD_C17
 #      define C_STANDARD "C17"
@@ -156,7 +163,7 @@
 #include <time.h>
 
 /* --- Platform Specific --- */
-#if defined(PLATFORM_WIN)
+#if defined(BASE_PLATFORM_WIN)
 #  define ssize_t SSIZE_T
 
 /* Process/Threading */
@@ -166,7 +173,7 @@
 #  define pclose _pclose
 
 /* Some functions need complete replacements */
-#  if defined(COMPILER_MSVC)
+#  if defined(BASE_COMPILER_MSVC)
 #    define snprintf _snprintf
 #    define vsnprintf _vsnprintf
 #  endif
@@ -246,8 +253,16 @@ void WaitTime(int64_t ms);
 typedef enum { OS_LINUX = 1, OS_WINDOWS, OS_MACOS, OS_FREEBSD, OS_ANDROID, OS_EMSCRIPTEN } OS;
 OS GetOS(void);
 
-typedef enum { GCC = 1, CLANG, TCC, MSVC } CompilerFamily;
+/* Compiler *family*: The convention set base treats a compiler as, NOT the
+   exact binary (use GetCompilerStr for that), forks collapse into their parent:
+   Fil-C reports COMPILER_CLANG because it's a drop-in clang fork and honors
+   clang's conventions. TCC keeps its own value even though it follows gcc,
+   because it's missing features you'll want to #if guard against. */
+typedef enum { COMPILER_GCC = 1, COMPILER_CLANG, COMPILER_TCC, COMPILER_MSVC } CompilerFamily;
 CompilerFamily GetCompilerFamily(void);
+
+/* Exact toolchain name (clang, gcc, cl.exe, filc, ...) */
+char *GetCompilerStr(void);
 
 /* --- Error --- */
 typedef int32_t errno_t;
@@ -422,7 +437,7 @@ void logErrorV(const char *format, va_list args) FORMAT_CHECK(1, 0);
 /* --- Defer Macros --- */
 #if defined(DEFER_MACRO)
 /* [GCC implementation] Must use C23 (depending on the platform) */
-#  if defined(COMPILER_GCC)
+#  if defined(BASE_COMPILER_GCC)
 #    define defer __DEFER(__COUNTER__)
 #    define __DEFER(N) __DEFER_(N)
 #    define __DEFER_(N) __DEFER__(__DEFER_FUNCTION_##N, __DEFER_VARIABLE_##N)
@@ -432,7 +447,7 @@ void logErrorV(const char *format, va_list args) FORMAT_CHECK(1, 0);
       auto void F(int *)
 
 /* [Clang implementation] Must compile with flag `-fblocks` */
-#  elif defined(COMPILER_CLANG)
+#  elif defined(BASE_COMPILER_CLANG)
 typedef void (^const __df_t)(void);
 
 [[maybe_unused]]
@@ -446,7 +461,7 @@ static inline void __df_cb(__df_t *__fp) {
 #    define __DEFER__(V) [[gnu::cleanup(__df_cb)]] __df_t V = ^void(void)
 
 /* [MSVC implementation] */
-#  elif defined(COMPILER_MSVC)
+#  elif defined(BASE_COMPILER_MSVC)
 #    error "Not available yet in MSVC, use `_try/_finally`"
 #  endif
 #endif
@@ -591,8 +606,7 @@ void __base_vec_free(void **data, size_t *length, size_t *capacity) {
 }
 
 /* --- Time and Platforms Implementation --- */
-
-#  if !defined(PLATFORM_WIN)
+#  if !defined(BASE_PLATFORM_WIN)
 WARN_UNUSED errno_t memcpy_s(void *dest, size_t destSize, const void *src, size_t count);
 
 #    if !defined(EINVAL)
@@ -619,31 +633,51 @@ WARN_UNUSED errno_t memcpy_s(void *dest, size_t destSize, const void *src, size_
 #  endif
 
 CompilerFamily GetCompilerFamily(void) {
-#  if defined(COMPILER_CLANG)
-  return CLANG;
-#  elif defined(COMPILER_GCC)
-  return GCC;
-#  elif defined(COMPILER_TCC)
-  return TCC;
-#  elif defined(COMPILER_MSVC)
-  return MSVC;
+#  if defined(BASE_COMPILER_CLANG)
+  return COMPILER_CLANG;
+#  elif defined(BASE_COMPILER_GCC)
+  return COMPILER_GCC;
+#  elif defined(BASE_COMPILER_TCC)
+  return COMPILER_TCC;
+#  elif defined(BASE_COMPILER_MSVC)
+  return COMPILER_MSVC;
+#  else
+#    error "base.h: Unsupported compiler"
+#  endif
+}
+
+char *GetCompilerStr(void) {
+#  if defined(BASE_COMPILER_FILC)
+  return "filc";
+#  elif defined(BASE_COMPILER_CLANG)
+  return "clang";
+#  elif defined(BASE_COMPILER_GCC)
+  return "gcc";
+#  elif defined(BASE_COMPILER_TCC)
+  return "tcc";
+#  elif defined(BASE_COMPILER_MSVC)
+  return "cl.exe";
+#  else
+#    error "base.h: Unsupported compiler"
 #  endif
 }
 
 OS GetOS(void) {
-#  if defined(PLATFORM_WIN)
+#  if defined(BASE_PLATFORM_WIN)
   return OS_WINDOWS;
-#  elif defined(PLATFORM_LINUX)
+#  elif defined(BASE_PLATFORM_LINUX)
   return OS_LINUX;
-#  elif defined(PLATFORM_MACOS)
+#  elif defined(BASE_PLATFORM_MACOS)
   return OS_MACOS;
-#  elif defined(PLATFORM_FREEBSD)
+#  elif defined(BASE_PLATFORM_FREEBSD)
   return OS_FREEBSD;
+#  else
+#    error "base.h: Unsupported platform"
 #  endif
 }
 
 int64_t TimeNow(void) {
-#  if defined(PLATFORM_WIN)
+#  if defined(BASE_PLATFORM_WIN)
   FILETIME ft;
   GetSystemTimeAsFileTime(&ft);
   LARGE_INTEGER li;
@@ -662,7 +696,7 @@ int64_t TimeNow(void) {
 }
 
 void WaitTime(int64_t ms) {
-#  if defined(PLATFORM_WIN)
+#  if defined(BASE_PLATFORM_WIN)
   sleep(ms);
 #  else
   struct timespec ts;
@@ -673,7 +707,7 @@ void WaitTime(int64_t ms) {
 }
 
 /* --- Error Implementation --- */
-#  if defined(PLATFORM_WIN)
+#  if defined(BASE_PLATFORM_WIN)
 Error ErrnoMatch(errno_t err) {
   switch (err) {
     case ERROR_FILE_NOT_FOUND:
@@ -1305,7 +1339,7 @@ float32_t RandomFloat(float32_t min, float32_t max) {
 }
 
 /* --- File System Implementation --- */
-#  if defined(PLATFORM_WIN)
+#  if defined(BASE_PLATFORM_WIN)
 static char curr_path[MAX_PATH];
 GetCwdResult GetCwd(void) {
   GetCwdResult result = {0};
@@ -1689,7 +1723,7 @@ Error FileCopy(String sourcePath, String destPath) {
 
 /* --- Logger Implemenation --- */
 void LogInit(void) {
-#  if defined(PLATFORM_WIN)
+#  if defined(BASE_PLATFORM_WIN)
   HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
   DWORD dwMode = 0;
   GetConsoleMode(hOut, &dwMode);
