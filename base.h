@@ -11,7 +11,7 @@
 */
 #pragma once
 
-/*   --- Platform MACROS and includes --- {{{   */
+/*    --- Platform MACROS and includes --- {{{   */
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32__)
 #  define BASE_PLATFORM_WIN
 #elif defined(__EMSCRIPTEN__)
