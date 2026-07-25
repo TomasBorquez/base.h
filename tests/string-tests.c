@@ -234,11 +234,18 @@ static void TestStringEdgeCases(void) {
     Arena *arena = ArenaCreate(128);
 
     String null_str = {0};
-    TEST_ASSERT(StrIsNull(null_str), "Null string check failed");
+    TEST_ASSERT(StrIsNull(null_str),  "Null string check failed");
+    TEST_ASSERT(StrIsEmpty(null_str), "Null string should also be empty");
 
     String empty = S("");
     TEST_ASSERT(!StrIsNull(empty), "Empty string should not be null");
     TEST_ASSERT(empty.length == 0, "Empty string length should be 0");
+    TEST_ASSERT(StrIsEmpty(empty), "Empty string should be empty");
+
+    TEST_ASSERT(!StrIsEmpty(S("a")), "Non-empty string should not be empty");
+    TEST_ASSERT(!StrIsEmpty(S("\0")), "S(\"\\0\") has length 1, not empty");
+    TEST_ASSERT(StrIsEmpty(StrNew(arena, "")), "StrNew of empty should be empty");
+    TEST_ASSERT(StrIsEmpty(StrNewSize(arena, "", 0)), "StrNewSize of empty should be empty");
 
     String whitespace = StrNew(arena, "  hello  ");
     StrTrim(&whitespace);

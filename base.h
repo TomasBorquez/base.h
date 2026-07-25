@@ -382,6 +382,7 @@ void StrToUpper(String string1);
 void StrToLower(String string1);
 
 bool StrIsNull(String string);
+bool StrIsEmpty(String string);
 void StrTrim(String *string);
 
 String StrSlice(Arena *arena, String str, size_t start, ssize_t end);
@@ -1047,8 +1048,13 @@ String StrNewSize(Arena *arena, char *str, size_t len) {
 
 void StrCopy(String *destination, String source) {
   Assert(!StrIsNull(*destination), "StrCopy: destination should never be NULL");
-  Assert(!StrIsNull(source), "StrCopy: source should never be NULL");
   Assert(destination->length >= source.length, "destination length should never smaller than source length");
+
+  if (StrIsEmpty(source)) {
+    destination->length = 0;
+    add_null_terminator(destination->data, 0);
+    return;
+  }
 
   errno_t err = memcpy_s(destination->data, destination->length + 1, source.data, source.length);
   Assert(err == SUCCESS, "StrCopy: memcpy_s failed, err: %d", err);
@@ -1108,14 +1114,15 @@ String StrConcat(Arena *arena, String string1, String string2) {
 }
 
 StringVector StrSplit(Arena *arena, String str, String delimiter) {
-  Assert(!StrIsNull(str), "StrSplit: str should never be NULL");
-  Assert(!StrIsNull(delimiter), "StrSplit: delimiter should never be NULL");
+  StringVector result = {0};
+  if (StrIsEmpty(str)) {
+    return result;
+  }
 
   char *start = str.data;
   char *end = str.data + str.length;
   char *curr = start;
-  StringVector result = {0};
-  if (delimiter.length == 0) {
+  if (StrIsEmpty(delimiter)) {
     for (size_t i = 0; i < str.length; i++) {
       String curr_str = StrNewSize(arena, str.data + i, 1);
       VecPush(result, curr_str);
@@ -1166,12 +1173,16 @@ bool StrIsNull(String str) {
   return str.data == NULL;
 }
 
+bool StrIsEmpty(String str) {
+  return str.length == 0;
+}
+
 static bool is_space(char character) {
   return character == ' ' || character == '\n' || character == '\t' || character == '\r';
 }
 
 void StrTrim(String *str) {
-  if (str->length == 0) {
+  if (StrIsEmpty(*str)) {
     return;
   }
 
@@ -1213,10 +1224,7 @@ String StrSlice(Arena *arena, String str, size_t start, ssize_t end) {
 }
 
 bool StrIncludes(String source, String sub_str) {
-  Assert(!StrIsNull(source), "StrIncludes: source should never be NULL");
-  Assert(!StrIsNull(sub_str), "StrIncludes: sub_str should never be NULL");
-
-  if (source.length == 0 || sub_str.length == 0 || sub_str.length > source.length) {
+  if (StrIsEmpty(source) || StrIsEmpty(sub_str) || sub_str.length > source.length) {
     return false;
   }
 
@@ -1982,7 +1990,7 @@ String IniSet(IniFile *ini_file, String key, String value) {
 
 int32_t IniGetInt(IniFile *ini_file, String key) {
   String value = IniGet(ini_file, key);
-  if (StrIsNull(value)) {
+  if (StrIsEmpty(value)) {
     return 0;
   }
 
@@ -1998,7 +2006,7 @@ int32_t IniGetInt(IniFile *ini_file, String key) {
 
 int64_t IniGetLong(IniFile *ini_file, String key) {
   String value = IniGet(ini_file, key);
-  if (StrIsNull(value)) {
+  if (StrIsEmpty(value)) {
     return 0;
   }
 
@@ -2014,7 +2022,7 @@ int64_t IniGetLong(IniFile *ini_file, String key) {
 
 float64_t IniGetDouble(IniFile *ini_file, String key) {
   String value = IniGet(ini_file, key);
-  if (StrIsNull(value)) {
+  if (StrIsEmpty(value)) {
     return 0.0;
   }
 
@@ -2030,7 +2038,7 @@ float64_t IniGetDouble(IniFile *ini_file, String key) {
 
 bool IniGetBool(IniFile *ini_file, String key) {
   String value = IniGet(ini_file, key);
-  if (StrIsNull(value)) {
+  if (StrIsEmpty(value)) {
     return false;
   }
 
