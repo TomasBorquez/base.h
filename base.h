@@ -860,6 +860,7 @@ static void _custom_assert(const char *expr, const char *file, unsigned line, co
     va_end(args);
   }
 
+  fflush(stdout);
   abort();
 }
 
@@ -873,6 +874,7 @@ static void _custom_unreachable(const char *file, unsigned line, const char *for
     va_end(args);
   }
 
+  fflush(stdout);
   abort();
 }
 
